@@ -6848,6 +6848,12 @@ a.close.disabled {
   overflow: hidden;
 }
 
+.carousel-image {
+  max-width: 70%;
+  height: auto;
+  margin: 0 auto; /* Center the images horizontally */
+}
+
 .carousel-inner::after {
   display: block;
   clear: both;
