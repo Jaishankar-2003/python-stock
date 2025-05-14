@@ -1,58 +1,56 @@
 import yfinance as yf
 import pandas as pd
-import pandas_ta as ta
+import pandas_ta  # no need to import ta.trend or ta.momentum
 import numpy as _np
-_np.NaN = _np.nan
-import time
+_np.NaN = _np.nan  # monkey-patch for NaN if needed
 
-# Load full list of NSE stock symbols from CSV (downloaded from NSE website)
+# 1) CSV symbols load
 symbols_df = pd.read_csv("nse_symbols.csv")
-symbols = symbols_df['Symbol'].tolist()
-symbols = [sym + ".NS" for sym in symbols]  # Add .NS for yfinance compatibility
+symbol_col = [c for c in symbols_df.columns if 'symbol' in c.lower()][0]
+symbols = symbols_df[symbol_col].str.strip().tolist()
+symbols = [s + ".NS" for s in symbols]
 
-selected_stocks = []
+# 2) Batch download 3 months daily data
+data = yf.download(
+    tickers=" ".join(symbols),
+    period="3mo",
+    interval="1d",
+    group_by="ticker",
+    threads=True,
+    progress=False
+)
 
-for symbol in symbols:
-    try:
-        df = yf.download(symbol, period="3mo", interval="1d", progress=False)
-        if df.empty or len(df) < 50:
-            continue
-        df.dropna(inplace=True)
+selected = []
+for sym in symbols:
+    df = data.get(sym)
+    if df is None or df.empty or len(df) < 50:
+        continue
 
-        # Technical indicators
-        df["EMA_20"] = ta.trend.ema_indicator(df["Close"], window=20)
-        df["EMA_50"] = ta.trend.ema_indicator(df["Close"], window=50)
-        df["RSI"] = ta.momentum.rsi(df["Close"], window=14)
-        macd = ta.trend.macd(df["Close"])
-        df["MACD_Line"] = macd.macd()
-        df["MACD_Signal"] = macd.macd_signal()
-        df["Volume_SMA_20"] = df["Volume"].rolling(window=20).mean()
+    # 3) Indicators via pandas_ta method-chain
+    df["EMA_20"]      = df.ta.ema(length=20)
+    df["EMA_50"]      = df.ta.ema(length=50)
+    df["RSI"]         = df.ta.rsi(length=14)
+    macd_df           = df.ta.macd(fast=12, slow=26, signal=9)
+    df["MACD_Line"]   = macd_df["MACD_12_26_9"]
+    df["MACD_Signal"] = macd_df["MACDs_12_26_9"]
+    df["Vol_SMA_20"]  = df["Volume"].rolling(20).mean()
 
-        latest = df.iloc[-1]
-        previous = df.iloc[-2]
+    latest   = df.iloc[-1]
+    prev     = df.iloc[-2]
 
-        if (
-            latest["Close"] > latest["EMA_20"] and
-            latest["Close"] > latest["EMA_50"] and
-            latest["EMA_20"] > latest["EMA_50"] and
-            latest["RSI"] > 50 and
-            latest["RSI"] < 70 and
-            latest["MACD_Line"] > latest["MACD_Signal"] and
-            latest["Volume"] > latest["Volume_SMA_20"] and
-            latest["Close"] > latest["Open"] and
-            latest["Close"] > previous["Close"] and
-            latest["Close"] > 50
-        ):
-            selected_stocks.append(symbol.replace(".NS", ""))
-            print(f"✅ Match: {symbol}")
-        else:
-            print(f"❌ Not match: {symbol}")
+    # 4) Swing-trade filters
+    if (
+        latest["Close"]      > latest["EMA_20"]
+        and latest["Close"]  > latest["EMA_50"]
+        and latest["EMA_20"] > latest["EMA_50"]
+        and 50              < latest["RSI"] < 70
+        and latest["MACD_Line"] > latest["MACD_Signal"]
+        and latest["Volume"]    > latest["Vol_SMA_20"]
+        and latest["Close"]     > latest["Open"]
+        and latest["Close"]     > prev["Close"]
+        and latest["Close"]     > 50
+    ):
+        selected.append(sym.replace(".NS",""))
 
-        time.sleep(1)  # To avoid rate-limiting from Yahoo
-    except Exception as e:
-        print(f"⚠️ Error processing {symbol}: {e}")
-
-# Final results
-print("\n🎯 Stocks matching swing trade criteria:")
-for stock in selected_stocks:
-    print(stock)
+# 5) Print results
+print("🎯 Matching stocks:", selected)
