@@ -1,19 +1,23 @@
 import yfinance as yf
 import pandas as pd
 import ta
+import time
 
-# List of NSE stock symbols (you can expand this list)
-nse_stocks = ["RELIANCE.NS", "INFY.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS"]
+# Load full list of NSE stock symbols from CSV (downloaded from NSE website)
+symbols_df = pd.read_csv("nse_symbols.csv")
+symbols = symbols_df['Symbol'].tolist()
+symbols = [sym + ".NS" for sym in symbols]  # Add .NS for yfinance compatibility
 
-# Store stocks that meet criteria
 selected_stocks = []
 
-for symbol in nse_stocks:
+for symbol in symbols:
     try:
-        df = yf.download(symbol, period="3mo", interval="1d")
+        df = yf.download(symbol, period="3mo", interval="1d", progress=False)
+        if df.empty or len(df) < 50:
+            continue
         df.dropna(inplace=True)
 
-        # Indicators
+        # Technical indicators
         df["EMA_20"] = ta.trend.ema_indicator(df["Close"], window=20)
         df["EMA_50"] = ta.trend.ema_indicator(df["Close"], window=50)
         df["RSI"] = ta.momentum.rsi(df["Close"], window=14)
@@ -25,7 +29,6 @@ for symbol in nse_stocks:
         latest = df.iloc[-1]
         previous = df.iloc[-2]
 
-        # Conditions
         if (
             latest["Close"] > latest["EMA_20"] and
             latest["Close"] > latest["EMA_50"] and
@@ -38,11 +41,16 @@ for symbol in nse_stocks:
             latest["Close"] > previous["Close"] and
             latest["Close"] > 50
         ):
-            selected_stocks.append(symbol)
-    except Exception as e:
-        print(f"Error processing {symbol}: {e}")
+            selected_stocks.append(symbol.replace(".NS", ""))
+            print(f"✅ Match: {symbol}")
+        else:
+            print(f"❌ Not match: {symbol}")
 
-# Output results
-print("✅ Stocks matching swing trade criteria:")
+        time.sleep(1)  # To avoid rate-limiting from Yahoo
+    except Exception as e:
+        print(f"⚠️ Error processing {symbol}: {e}")
+
+# Final results
+print("\n🎯 Stocks matching swing trade criteria:")
 for stock in selected_stocks:
     print(stock)
