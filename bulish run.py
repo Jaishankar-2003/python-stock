@@ -1,6 +1,6 @@
 import yfinance as yf
 import pandas as pd
-import ta
+import pandas_ta as ta
 import time
 
 # Load full list of NSE stock symbols from CSV (downloaded from NSE website)
