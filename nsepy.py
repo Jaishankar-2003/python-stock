@@ -8,27 +8,27 @@ import pandas_ta as ta
 symbols_df = pd.read_csv("data.csv")
 symbols = [s.strip() + ".NS" for s in symbols_df['SYMBOL']]
 
+
 # 🔁 Step 2: Download Historical Data with Enhanced Error Handling
 def download_batch(batch):
     data = {}
     for sym in batch:
         for attempt in range(3):
             try:
-                print(f"Fetching data for {sym} (Attempt {attempt+1})...")
+                print(f"Fetching data for {sym} (Attempt {attempt + 1})...")
                 df = yf.download(sym, period="3mo", interval="1d", progress=False)
                 if df is not None and not df.empty:
                     data[sym] = df
                     break  # Break the retry loop if successful
                 else:
-                    print(f"No data received for {sym} on attempt {attempt+1}")
+                    print(f"No data received for {sym} on attempt {attempt + 1}")
                     time.sleep(5)  # Add a delay before retrying
             except Exception as e:
-                print(f"Error fetching {sym} on attempt {attempt+1}: {e}")
+                print(f"Error fetching {sym} on attempt {attempt + 1}: {e}")
                 time.sleep(5)  # Add a delay before retrying
         if sym not in data:
             print(f"Failed to download data for {sym} after 3 attempts. Skipping.")
     return data
-
 
 
 # 🎯 Step 3: Scan for Swing Setups
@@ -61,7 +61,7 @@ for chunk in chunks:
             # --- Handle MultiIndex ---
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)  # Use the top level
-                print("MultiIndex flattened.") # Added this line
+                print("MultiIndex flattened.")  # Added this line
             elif not {'Close', 'Open', 'High', 'Low', 'Volume'}.issubset(df.columns):
                 print(f"Skipping {sym}:  Missing essential columns")
                 continue
@@ -96,18 +96,28 @@ for chunk in chunks:
                 print(f"Skipping {sym}: Missing indicator data")
                 continue
 
+            # --- Print statements for debugging ---
+            print(f"\n--- Checking conditions for {sym} ---")
+            print(f"Close: {latest['Close']}, EMA_20: {latest['EMA_20']}, EMA_50: {latest['EMA_50']}")
+            print(f"RSI: {latest['RSI']}")
+            print(f"MACD_Line: {latest['MACD_Line']}, MACD_Signal: {latest['MACD_Signal']}")
+            print(f"Volume: {latest['Volume']}, Vol_SMA_20: {latest['Vol_SMA_20']}")
+            print(f"Open: {latest['Open']}, Previous Close: {prev['Close']}")
+            print(f"15d_return: {latest['15d_return']}")
+            print(f"Recent_High_15d: {latest['Recent_High_15d']}")
+
             # 🚨 Filter conditions
             if (
-                latest["Close"] > latest["EMA_20"] > latest["EMA_50"]
-                and 50 < latest["RSI"] < 70
-                and latest["MACD_Line"] > latest["MACD_Signal"]
-                and latest["Volume"] > latest["Vol_SMA_20"]
-                and latest["Close"] > latest["Open"]
-                and latest["Close"] > prev["Close"]
-                and latest["Close"] > 50
-                and latest["15d_return"] >= 10
-                and latest["Close"] >= latest["Recent_High_15d"]
-                and not (latest["RSI"] > 68 and (latest["MACD_Line"] - latest["MACD_Signal"]) < 0.5)
+                    latest["Close"] > latest["EMA_20"] > latest["EMA_50"]
+                    and 50 < latest["RSI"] < 70
+                    and latest["MACD_Line"] > latest["MACD_Signal"]
+                    and latest["Volume"] > latest["Vol_SMA_20"]
+                    and latest["Close"] > latest["Open"]
+                    and latest["Close"] > prev["Close"]
+                    and latest["Close"] > 50
+                    and latest["15d_return"] >= 10
+                    and latest["Close"] >= latest["Recent_High_15d"]
+                    and not (latest["RSI"] > 68 and (latest["MACD_Line"] - latest["MACD_Signal"]) < 0.5)
             ):
                 selected.append(sym)
                 print(f"{sym} passed the filters")
