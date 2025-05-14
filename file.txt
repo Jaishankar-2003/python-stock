@@ -1,0 +1,89 @@
+The `KeyError: 'Symbol'` means that your CSV doesn’t actually have a column named exactly `Symbol`. Let’s add a quick debug step to see what columns you do have, then adapt the code to pick up whichever column contains your tickers.
+
+---
+
+### 1) Inspect your CSV’s columns
+
+Right after you read the CSV, insert:
+
+```python
+symbols_df = pd.read_csv("nse_symbols.csv")
+print("Columns in CSV:", symbols_df.columns.tolist())
+```
+
+Run just that and check the console. You’ll see something like:
+
+```
+Columns in CSV: ['SYMBOL', 'Company Name']
+```
+
+(or it might be `['Code', 'Name']`, etc.)
+
+---
+
+### 2) Use the actual column name (or detect it dynamically)
+
+#### **Option A**: Hard-code the real column name
+
+If the debug shows the column is called `SYMBOL`, change:
+
+```python
+symbols = symbols_df['Symbol'].tolist()
+```
+
+to
+
+```python
+symbols = symbols_df['SYMBOL'].tolist()
+```
+
+#### **Option B**: Auto-detect the ticker column
+
+Replace your load block with:
+
+```python
+symbols_df = pd.read_csv("nse_symbols.csv")
+print("Columns in CSV:", symbols_df.columns.tolist())
+
+# Find a column whose name contains "symbol" (case-insensitive)
+symbol_cols = [c for c in symbols_df.columns if 'symbol' in c.lower()]
+if not symbol_cols:
+    raise ValueError("No column containing 'symbol' found in CSV headers")
+symbol_col = symbol_cols[0]
+symbols = symbols_df[symbol_col].astype(str).tolist()
+```
+
+This way you don’t have to worry about exact casing.
+
+---
+
+### 3) Full adjusted snippet
+
+```python
+import yfinance as yf
+import pandas as pd
+import pandas_ta as ta
+import time
+
+# Load and detect symbol column
+symbols_df = pd.read_csv("nse_symbols.csv")
+print("Columns in CSV:", symbols_df.columns.tolist())
+symbol_cols = [c for c in symbols_df.columns if 'symbol' in c.lower()]
+if not symbol_cols:
+    raise ValueError("No column containing 'symbol' found in CSV headers")
+symbol_col = symbol_cols[0]
+symbols = symbols_df[symbol_col].astype(str).tolist()
+symbols = [sym + ".NS" for sym in symbols]
+
+selected_stocks = []
+
+for symbol in symbols:
+    # … rest of your screening loop …
+    pass
+```
+
+1. **Run this** to see exactly what your headers are.
+2. **Adjust** if necessary (or let the auto-detect handle it).
+3. Then drop back into your loop and the `KeyError` will be gone.
+
+Let me know if anything else pops up!
