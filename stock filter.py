@@ -18,6 +18,6 @@ def filter_stock_names(input_file, output_file):
 
 
 # Example usage
-input_file = 'nse_symbols.csv'  # Replace with your input CSV file path
+input_file = 'nifty-50.csv'  # Replace with your input CSV file path
 output_file = 'filtered_stock_names.csv'  # Output file to store stock names
 filter_stock_names(input_file, output_file)
