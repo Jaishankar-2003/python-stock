@@ -16,7 +16,7 @@ def download_batch(batch):
         for attempt in range(3):
             try:
                 print(f"Fetching data for {sym} (Attempt {attempt + 1})...")
-                df = yf.download(sym, period="3mo", interval="1d", progress=False)
+                df = yf.download(sym, period="1mo", interval="1d", progress=False)
                 if df is not None and not df.empty:
                     data[sym] = df
                     break  # Break the retry loop if successful

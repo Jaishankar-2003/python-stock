@@ -1,121 +1,94 @@
 import pandas as pd
-import numpy as np
-import time
-import yfinance as yf
 import pandas_ta as ta
+import yfinance as yf
 from datetime import datetime, timedelta
+import time
 
-# ⚙️ Step 1: Load NSE Symbols
+# Step 1: Load symbols and add .NS suffix
 symbols_df = pd.read_csv("filtered_stock_names.csv")
 symbols = [s.strip() + ".NS" for s in symbols_df['SYMBOL']]
 
-# 🔁 Step 2: Download Historical Data with Enhanced Error Handling
-def download_batch(batch):
-    data = {}
-    for sym in batch:
-        for attempt in range(3):
-            try:
-                print(f"Fetching data for {sym} (Attempt {attempt + 1})...")
-                df = yf.download(sym, period="3mo", interval="1d", progress=False)
-                if df is not None and not df.empty:
-                    data[sym] = df
-                    break
-                else:
-                    print(f"No data received for {sym} on attempt {attempt + 1}")
-                    time.sleep(5)
-            except Exception as e:
-                print(f"Error fetching {sym} on attempt {attempt + 1}: {e}")
-                time.sleep(5)
-        if sym not in data:
-            print(f"Failed to download data for {sym} after 3 attempts. Skipping.")
-    return data
-
-# 🎯 Step 3: Scan for Swing Setups
+# Step 2: Initialize
 selected = []
-chunk_size = 50
 yesterday = (datetime.now() - timedelta(days=1)).date()
-chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-for chunk in chunks:
-    data = download_batch(chunk)
-    if not data:
-        print("No data downloaded for this chunk. Continuing...")
-        continue
+# Step 3: Process each symbol
+for symbol in symbols:
+    try:
+        print(f"\n🔍 Fetching data for: {symbol}")
+        df = yf.download(symbol, period="3mo", interval="1d", progress=False, auto_adjust=False)
 
-    for sym in chunk:
-        if sym not in data:
+        if df is None or df.empty or len(df) < 50:
+            print(f"❌ Skipping {symbol}: Not enough data")
             continue
-        try:
-            df = data.get(sym)
 
-            if df is None or df.empty or len(df) < 50:
-                print(f"Skipping {sym}: Insufficient data")
+        df.index = pd.to_datetime(df.index)
+        df = df[~df.index.duplicated(keep='last')]
+
+        if df.index[-1].date() < yesterday:
+            print(f"⚠️ Skipping {symbol}: Data outdated ({df.index[-1].date()})")
+            continue
+
+        # Indicators
+        df["EMA_20"] = ta.ema(df["Close"], length=20)
+        df["EMA_50"] = ta.ema(df["Close"], length=50)
+        df["RSI"] = ta.rsi(df["Close"], length=14)
+        df["Vol_SMA_20"] = df["Volume"].rolling(window=20).mean()
+        df["15d_return"] = df["Close"].pct_change(15) * 100
+        df["Recent_High_15d"] = df["High"].rolling(window=15).max()
+
+        macd = ta.macd(df["Close"])
+        if macd is not None and not macd.empty:
+            df["MACD_Line"] = macd["MACD_12_26_9"]
+            df["MACD_Signal"] = macd["MACDs_12_26_9"]
+        else:
+            print(f"⚠️ MACD missing for {symbol}. Skipping MACD condition.")
+            df["MACD_Line"] = None
+            df["MACD_Signal"] = None
+
+        df.dropna(inplace=True)
+
+        if len(df) < 2:
+            print(f"❌ Skipping {symbol}: Insufficient data after indicators")
+            continue
+
+        latest = df.iloc[-1]
+        prev = df.iloc[-2]
+
+        # Conditions
+        conditions = [
+            latest["Close"] > latest["EMA_20"] > latest["EMA_50"],
+            50 < latest["RSI"] < 70,
+            latest["Volume"] > latest["Vol_SMA_20"],
+            latest["Close"] > latest["Open"],
+            latest["Close"] > prev["Close"],
+            latest["Close"] > 50,
+            latest["15d_return"] >= 10,
+            latest["Close"] >= latest["Recent_High_15d"]
+        ]
+
+        # Optional MACD condition
+        if pd.notna(latest["MACD_Line"]) and pd.notna(latest["MACD_Signal"]):
+            conditions.append(latest["MACD_Line"] > latest["MACD_Signal"])
+            if latest["RSI"] > 68 and (latest["MACD_Line"] - latest["MACD_Signal"]) < 0.5:
+                print(f"❌ Rejected: {symbol} (MACD-RSI fakeout)")
                 continue
 
-            df.index = pd.to_datetime(df.index)
-            if df.index[-1].date() < yesterday:
-                print(f"Skipping {sym}: Latest data is outdated ({df.index[-1].date()})")
-                continue
+        if all(conditions):
+            print(f"✅ Selected: {symbol}")
+            selected.append(symbol)
+        else:
+            print(f"❌ Rejected: {symbol} (Did not meet all conditions)")
 
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-            elif not {'Close', 'Open', 'High', 'Low', 'Volume'}.issubset(df.columns):
-                print(f"Skipping {sym}:  Missing essential columns")
-                continue
+    except Exception as e:
+        print(f"⚠️ Error processing {symbol}: {e}")
+    time.sleep(1.5)  # Slow down requests
 
-            df = df.copy()
-            df.dropna(inplace=True)
-
-            # Add indicators
-            try:
-                df["EMA_20"] = ta.ema(df["Close"], length=20)
-                df["EMA_50"] = ta.ema(df["Close"], length=50)
-                df["RSI"] = ta.rsi(df["Close"], length=14)
-                macd = ta.macd(df["Close"], fast=12, slow=26, signal=9)
-                df["MACD_Line"] = macd["MACD_12_26_9"]
-                df["MACD_Signal"] = macd["MACDs_12_26_9"]
-                df["Vol_SMA_20"] = df["Volume"].rolling(window=20).mean()
-                df["15d_return"] = df["Close"].pct_change(15) * 100
-                df["Recent_High_15d"] = df["High"].rolling(window=15).max()
-            except Exception as e:
-                print(f"Error calculating indicators for {sym}: {e}")
-                continue
-
-            latest = df.iloc[-1]
-            prev = df.iloc[-2]
-
-            required_cols = [
-                "EMA_20", "EMA_50", "RSI", "MACD_Line",
-                "MACD_Signal", "Vol_SMA_20", "15d_return", "Recent_High_15d"
-            ]
-            if pd.isna(latest[required_cols]).any():
-                print(f"Skipping {sym}: Missing indicator data")
-                continue
-
-            # 🚨 Filter conditions
-            if (
-                latest["Close"] > latest["EMA_20"] > latest["EMA_50"]
-                and 50 < latest["RSI"] < 70
-                and latest["MACD_Line"] > latest["MACD_Signal"]
-                and latest["Volume"] > latest["Vol_SMA_20"]
-                and latest["Close"] > latest["Open"]
-                and latest["Close"] > prev["Close"]
-                and latest["Close"] > 50
-                and latest["15d_return"] >= 10
-                and latest["Close"] >= latest["Recent_High_15d"]
-                and not (latest["RSI"] > 68 and (latest["MACD_Line"] - latest["MACD_Signal"]) < 0.5)
-            ):
-                selected.append(sym)
-                print(f"{sym} passed the filters")
-
-        except Exception as e:
-            print(f"⚠️ Error processing {sym}: {e}")
-
-# ✅ Step 4: Output Result
-print("\n🎯 Swing Trade Candidates:")
+# Step 4: Final Output
+print("\n🎯 Final Swing Trade Candidates:")
 if selected:
-    for stock in selected:
-        print(f"  • {stock}")
-    print(f"\nTotal matches: {len(selected)}")
+    for sym in selected:
+        print(f"  • {sym}")
+    print(f"\n✅ Total Matches: {len(selected)}")
 else:
-    print("No stocks passed the filters")
+    print("❌ No stocks matched the swing criteria.")
