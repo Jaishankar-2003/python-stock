@@ -169,6 +169,12 @@ output_text.tag_configure("title", font=font_bold, foreground="#0B3D91")
 output_text.tag_configure("normal", font=font_output, foreground="black")
 output_text.tag_configure("error", font=font_output, foreground="red")
 output_text.tag_configure("green_text", font=font_output, foreground="green")
+output_text.tag_configure("green", font=font_output, foreground="green")
+output_text.tag_configure("red", font=font_output, foreground="red")
+output_text.tag_configure("blue", font=font_output, foreground="blue")
+output_text.tag_configure("orange", font=font_output, foreground="orange")
+output_text.tag_configure("yellow", font=font_output, foreground="dark goldenrod")
+
 
 # Trade History
 trade_history = []
@@ -211,7 +217,15 @@ def display_output(results):
         output_text.insert(tk.END, "="*40 + "\n", "title")
         for k, v in results.items():
             if k == "Entry Price":
-                output_text.insert(tk.END, f"{k}: {v}\n", "green_text")  # green text for Entry Price
+                output_text.insert(tk.END, f"{k}: {v}\n", "green_text")
+            elif k in ["Expected Profit (₹)", "Reward Ratio", "Estimated CAGR %"]:
+                output_text.insert(tk.END, f"{k}: {v}\n", "green")
+            elif k in ["Stop-Loss Price", "Risk per Share", "Risk Amount (₹)", "Risk on Invested %"]:
+                output_text.insert(tk.END, f"{k}: {v}\n", "red")
+            elif k in ["Capital Usage %"]:
+                output_text.insert(tk.END, f"{k}: {v}\n", "orange")
+            elif k in ["Break-Even Price", "Invested Amount (₹)"]:
+                output_text.insert(tk.END, f"{k}: {v}\n", "blue")
             else:
                 output_text.insert(tk.END, f"{k}: {v}\n")
         update_chart(results["Entry Price"], results["Stop-Loss Price"], results["Target Price"])
