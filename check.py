@@ -1,15 +1,16 @@
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
+import tkinter.font as tkfont  # For bold fonts
 
-
+# ✅ Main calculation logic
 def general_trade_calculator(
-        capital=None,
-        entry_price=None,
-        stop_loss_price=None,
-        target_price=None,
-        risk_perc=None,
-        reward_ratio=None,
-        manual_position_size=None
+    capital=None,
+    entry_price=None,
+    stop_loss_price=None,
+    target_price=None,
+    risk_perc=None,
+    reward_ratio=None,
+    manual_position_size=None
 ):
     if not capital or not entry_price:
         return "❌ Capital and Entry Price are required."
@@ -26,20 +27,17 @@ def general_trade_calculator(
     else:
         return "❌ Either Stop-Loss Price or Risk % is required."
 
-    # Risk amount
-    risk_amount = capital * (risk_perc / 100) if risk_perc else risk_per_share * (capital // entry_price)
-
-    # Position size: manual if given, else auto calculate
-    if manual_position_size is not None and manual_position_size > 0:
-        position_size = int(manual_position_size)
-        invested_amount = position_size * entry_price
-        # Recalculate risk amount based on manual position size
-        risk_amount = position_size * risk_per_share
+    # Determine position size
+    if manual_position_size:
+        position_size = manual_position_size
+        risk_amount = risk_per_share * position_size
     else:
+        risk_amount = capital * (risk_perc / 100) if risk_perc else risk_per_share * (capital // entry_price)
         position_size = int(risk_amount // risk_per_share)
-        invested_amount = position_size * entry_price
 
-    # Reward/Target price
+    invested_amount = position_size * entry_price
+
+    # Reward and target price
     if reward_ratio and not target_price:
         reward_per_share = risk_per_share * reward_ratio
         target_price = entry_price + reward_per_share
@@ -49,7 +47,6 @@ def general_trade_calculator(
     else:
         return "❌ Either Target Price or Reward Ratio is required."
 
-    # Profit and % gain
     expected_profit = reward_per_share * position_size
     percent_gain = (expected_profit / capital) * 100
 
@@ -67,7 +64,7 @@ def general_trade_calculator(
         "Expected % Gain": round(percent_gain, 2),
     }
 
-
+# ✅ GUI event
 def calculate():
     try:
         capital = float(entry_capital.get())
@@ -76,7 +73,7 @@ def calculate():
         target = float(entry_target.get()) if entry_target.get() else None
         risk_perc = float(entry_risk_perc.get()) if entry_risk_perc.get() else None
         reward_ratio = float(entry_reward_ratio.get()) if entry_reward_ratio.get() else None
-        manual_pos = int(entry_manual_pos.get()) if entry_manual_pos.get() else None
+        manual_pos_size = int(entry_position_size.get()) if entry_position_size.get() else None
 
         result = general_trade_calculator(
             capital=capital,
@@ -85,7 +82,7 @@ def calculate():
             target_price=target,
             risk_perc=risk_perc,
             reward_ratio=reward_ratio,
-            manual_position_size=manual_pos
+            manual_position_size=manual_pos_size
         )
 
         output_text.config(state='normal')
@@ -98,7 +95,6 @@ def calculate():
                 output_text.insert(tk.END, f"{key}: {value}\n")
                 end = output_text.index(tk.END)
 
-                # Apply highlight tags
                 if "Risk" in key:
                     output_text.tag_add("risk", start, end)
                 elif "Stop-Loss" in key:
@@ -115,12 +111,18 @@ def calculate():
     except Exception as e:
         messagebox.showerror("Error", f"Invalid input: {e}")
 
-
-# Build GUI
+# ✅ GUI Setup
 root = tk.Tk()
 root.title("Swing Trade Calculator 🧮")
 root.geometry("600x650")
 
+# Font styles
+bold_red_font = tkfont.Font(family="Arial", size=10, weight="bold")
+bold_green_font = tkfont.Font(family="Arial", size=10, weight="bold")
+bold_blue_font = tkfont.Font(family="Arial", size=10, weight="bold")
+bold_orange_font = tkfont.Font(family="Arial", size=10, weight="bold")
+
+# Input fields
 tk.Label(root, text="Total Capital (₹):").pack()
 entry_capital = tk.Entry(root)
 entry_capital.pack()
@@ -146,17 +148,20 @@ entry_reward_ratio = tk.Entry(root)
 entry_reward_ratio.pack()
 
 tk.Label(root, text="Manual Position Size (optional):").pack()
-entry_manual_pos = tk.Entry(root)
-entry_manual_pos.pack()
+entry_position_size = tk.Entry(root)
+entry_position_size.pack()
 
 tk.Button(root, text="Calculate", command=calculate, bg="green", fg="white").pack(pady=10)
 
-output_text = scrolledtext.ScrolledText(root, height=22, width=70, wrap=tk.WORD)
+# Output field
+output_text = scrolledtext.ScrolledText(root, height=20, width=70, wrap=tk.WORD)
 output_text.pack()
 
-output_text.tag_config("risk", foreground="red", font=('Arial', 10, 'bold'))
-output_text.tag_config("profit", foreground="green", font=('Arial', 10, 'bold'))
-output_text.tag_config("gain", foreground="blue", font=('Arial', 10, 'bold'))
-output_text.tag_config("stop", foreground="darkorange", font=('Arial', 10, 'bold'))
+# Highlight tag styles
+output_text.tag_config("risk", foreground="red", font=bold_red_font)
+output_text.tag_config("profit", foreground="green", font=bold_green_font)
+output_text.tag_config("gain", foreground="blue", font=bold_blue_font)
+output_text.tag_config("stop", foreground="orange", font=bold_orange_font)
 
+# Start the app
 root.mainloop()
