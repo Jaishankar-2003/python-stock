@@ -4,7 +4,7 @@ import tkinter.font as tkfont
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 
-# Trade calculation logic
+# --- Trade calculation function ---
 def general_trade_calculator(
     capital=None,
     entry_price=None,
@@ -17,7 +17,6 @@ def general_trade_calculator(
     if not capital or not entry_price:
         return "❌ Capital and Entry Price are required."
 
-    # Risk calculation
     if stop_loss_price:
         risk_per_share = entry_price - stop_loss_price
         if risk_per_share <= 0:
@@ -29,7 +28,6 @@ def general_trade_calculator(
     else:
         return "❌ Either Stop-Loss Price or Risk % is required."
 
-    # Position size
     if manual_position_size:
         position_size = manual_position_size
         risk_amount = risk_per_share * position_size
@@ -39,7 +37,6 @@ def general_trade_calculator(
 
     invested_amount = position_size * entry_price
 
-    # Reward/target
     if reward_ratio and not target_price:
         reward_per_share = risk_per_share * reward_ratio
         target_price = entry_price + reward_per_share
@@ -66,6 +63,28 @@ def general_trade_calculator(
         "Expected % Gain": round(percent_gain, 2),
     }
 
+# --- Position Size Only Mini Calculator ---
+def calculate_position_size():
+    try:
+        capital = float(entry_calc_capital.get())
+        entry_price = float(entry_calc_entry.get())
+        stop_loss = float(entry_calc_stop.get())
+        risk_perc = float(entry_calc_risk.get())
+
+        risk_per_share = entry_price - stop_loss
+        risk_amount = capital * (risk_perc / 100)
+        position_size = int(risk_amount // risk_per_share)
+
+        result_position_calc.config(state='normal')
+        result_position_calc.delete("1.0", tk.END)
+        result_position_calc.insert(tk.END, f"Calculated Position Size: {position_size} shares\n")
+        result_position_calc.insert(tk.END, f"Risk per Share: ₹{risk_per_share:.2f}\n")
+        result_position_calc.insert(tk.END, f"Total Risk Amount: ₹{risk_amount:.2f}")
+        result_position_calc.config(state='disabled')
+    except Exception as e:
+        messagebox.showerror("Error", f"Invalid input: {e}")
+
+# --- Full Calculation Button ---
 def calculate():
     try:
         capital = float(entry_capital.get())
@@ -101,7 +120,6 @@ def calculate():
                     tag = "profit"
                 elif "Expected % Gain" in key:
                     tag = "gain"
-
                 if tag:
                     output_text.insert(tk.END, f"{key}: {value}\n", tag)
                 else:
@@ -117,48 +135,51 @@ def calculate():
 
 def update_chart(entry_price, stop_loss_price, target_price):
     ax.clear()
-    ax.set_title("Trade Setup Chart", fontsize=12)
-    ax.set_ylabel("Price (₹)", fontsize=11)
+    ax.set_title("Trade Setup Chart", fontsize=16)
+    ax.set_ylabel("Price (₹)", fontsize=14)
     ax.set_xticks([])
     prices = [stop_loss_price, entry_price, target_price]
     labels = ["Stop Loss", "Entry", "Target"]
 
     ax.plot([1, 2, 3], prices, marker='o', linestyle='-', color='black')
     for i, (x, y) in enumerate(zip([1, 2, 3], prices)):
-        ax.text(x, y, f"{labels[i]}:\n₹{y}", ha='center', va='bottom', fontweight='bold', fontsize=11)
+        ax.text(x, y, f"{labels[i]}:\n₹{y}", ha='center', va='bottom', fontweight='bold', fontsize=13)
     canvas.draw()
 
 def clear_chart():
     ax.clear()
     canvas.draw()
 
-# GUI Setup
+# --- GUI Setup ---
 root = tk.Tk()
-root.title("Swing Trade Calculator 🧮")
-root.geometry("920x480")
+root.title("📈 Advanced Swing Trade Calculator")
+root.state("zoomed")  # Fullscreen
 
-# Fonts (Larger)
-font_label = tkfont.Font(family="Arial", size=11)
-font_entry = tkfont.Font(family="Arial", size=12)
-font_output = tkfont.Font(family="Consolas", size=12)
-font_bold = tkfont.Font(family="Arial", size=12, weight="bold")
+# Fonts
+font_label = tkfont.Font(family="Arial", size=14)
+font_entry = tkfont.Font(family="Arial", size=14)
+font_output = tkfont.Font(family="Consolas", size=14)
+font_bold = tkfont.Font(family="Arial", size=15, weight="bold")
 
-# Frames
-frame_output = tk.Frame(root, padx=5, pady=5)
-frame_input = tk.Frame(root, padx=5, pady=5)
-frame_chart = tk.Frame(root, padx=5, pady=5)
+# --- Frames ---
+frame_output = tk.Frame(root, padx=10, pady=10)
+frame_input = tk.Frame(root, padx=10, pady=10)
+frame_chart = tk.Frame(root, padx=10, pady=10)
+frame_calc = tk.Frame(root, padx=10, pady=10, relief=tk.RIDGE, bd=2)
 
 frame_output.grid(row=0, column=0, sticky="nsew")
 frame_input.grid(row=0, column=1, sticky="nsew")
 frame_chart.grid(row=0, column=2, sticky="nsew")
+frame_calc.grid(row=0, column=3, sticky="nsew")
 
-root.grid_columnconfigure(0, weight=1, uniform="group")
-root.grid_columnconfigure(1, weight=1, uniform="group")
-root.grid_columnconfigure(2, weight=1, uniform="group")
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+root.grid_columnconfigure(2, weight=1)
+root.grid_columnconfigure(3, weight=1)
 root.grid_rowconfigure(0, weight=1)
 
-# Output Text
-output_text = scrolledtext.ScrolledText(frame_output, font=font_output, width=36, height=25)
+# --- Output Section ---
+output_text = scrolledtext.ScrolledText(frame_output, font=font_output, width=40, height=30)
 output_text.pack(expand=True, fill="both")
 
 output_text.tag_configure("bold", font=font_bold)
@@ -167,28 +188,39 @@ output_text.tag_configure("profit", foreground="green", font=font_bold)
 output_text.tag_configure("gain", foreground="blue", font=font_bold)
 output_text.tag_configure("stop", foreground="orange", font=font_bold)
 
-# Input Section
+# --- Input Field Generator ---
 def add_input(parent, label):
     frame = tk.Frame(parent)
-    frame.pack(fill="x", pady=4)
-    tk.Label(frame, text=label, font=font_label).pack(side="top", anchor="w")
-    entry = tk.Entry(frame, font=font_entry, width=20)
-    entry.pack(side="top", fill="x")
+    frame.pack(fill="x", pady=6)
+    tk.Label(frame, text=label, font=font_label).pack(anchor="w")
+    entry = tk.Entry(frame, font=font_entry)
+    entry.pack(fill="x")
     return entry
 
-entry_capital = add_input(frame_input, "💰 Total Capital (₹):")
+entry_capital = add_input(frame_input, "💰 Capital (₹):")
 entry_entry = add_input(frame_input, "📌 Entry Price (₹):")
-entry_stop_loss = add_input(frame_input, "🛑 Stop Loss Price (₹):")
+entry_stop_loss = add_input(frame_input, "🛑 Stop-Loss Price (₹):")
 entry_target = add_input(frame_input, "🎯 Target Price (₹):")
-entry_risk_perc = add_input(frame_input, "⚠️ Risk % (e.g., 2):")
-entry_reward_ratio = add_input(frame_input, "💹 Reward Ratio (e.g., 2):")
+entry_risk_perc = add_input(frame_input, "⚠️ Risk % (e.g. 2):")
+entry_reward_ratio = add_input(frame_input, "💹 Reward Ratio (e.g. 2):")
 entry_position_size = add_input(frame_input, "🔢 Manual Position Size:")
 
-tk.Button(frame_input, text="📈 Calculate", command=calculate, font=font_bold, bg="#4CAF50", fg="white").pack(pady=12, fill="x")
+tk.Button(frame_input, text="📈 Calculate Trade Plan", command=calculate, font=font_bold, bg="#4CAF50", fg="white").pack(pady=15, fill="x")
 
-# Chart
-fig, ax = plt.subplots(figsize=(4, 3.2), dpi=100)
+# --- Chart ---
+fig, ax = plt.subplots(figsize=(4.5, 4), dpi=100)
 canvas = FigureCanvasTkAgg(fig, master=frame_chart)
 canvas.get_tk_widget().pack(expand=True, fill="both")
+
+# --- Position Size Mini Calculator ---
+tk.Label(frame_calc, text="🧮 Position Size Calculator", font=font_bold).pack(pady=5)
+entry_calc_capital = add_input(frame_calc, "Capital (₹):")
+entry_calc_entry = add_input(frame_calc, "Entry Price (₹):")
+entry_calc_stop = add_input(frame_calc, "Stop-Loss Price (₹):")
+entry_calc_risk = add_input(frame_calc, "Risk % (e.g. 2):")
+tk.Button(frame_calc, text="🧾 Calculate Position Size", command=calculate_position_size, font=font_bold, bg="#2196F3", fg="white").pack(pady=10, fill="x")
+
+result_position_calc = scrolledtext.ScrolledText(frame_calc, font=font_output, width=30, height=6, state='disabled')
+result_position_calc.pack(fill="both", expand=True)
 
 root.mainloop()
