@@ -158,8 +158,8 @@ root.state("zoomed")  # Fullscreen
 # Fonts
 font_label = tkfont.Font(family="Arial", size=14)
 font_entry = tkfont.Font(family="Arial", size=14)
-font_output = tkfont.Font(family="Consolas", size=14)
-font_bold = tkfont.Font(family="Arial", size=15, weight="bold")
+font_output = tkfont.Font(family="Consolas", size=18)
+font_bold = tkfont.Font(family="Arial", size=20, weight="bold")
 
 # --- Frames ---
 frame_output = tk.Frame(root, padx=10, pady=10)
