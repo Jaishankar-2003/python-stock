@@ -144,7 +144,8 @@ frame_history.pack(fill="both", expand=True)
 
 # Configure tags for styling output text
 output_text.tag_configure("title", font=font_bold, foreground="#0B3D91")  # dark blue bold title
-output_text.tag_configure("price", font=font_bold, foreground="#D35400")  # orange bold for prices
+output_text.tag_configure("price", font=font_bold, foreground="green")
+output_text.tag_configure("red", font=font_bold, foreground="red")# orange bold for prices
 output_text.tag_configure("gain_positive", font=font_bold, foreground="#27AE60")  # green bold for positive gains
 output_text.tag_configure("gain_negative", font=font_bold, foreground="#C0392B")  # red bold for negative gains
 output_text.tag_configure("gain_neutral", font=font_bold, foreground="#7F8C8D")  # gray for neutral/unknown
@@ -177,7 +178,8 @@ def calculate():
 
         # Re-add tags after clearing
         output_text.tag_configure("title", font=font_bold, foreground="#0B3D91")  # dark blue bold title
-        output_text.tag_configure("price", font=font_bold, foreground="#D35400")  # orange bold for prices
+        output_text.tag_configure("price", font=font_bold, foreground="green")
+        output_text.tag_configure("red", font=font_bold, foreground="red") # orange bold for prices
         output_text.tag_configure("gain_positive", font=font_bold, foreground="#27AE60")  # green bold for positive gains
         output_text.tag_configure("gain_negative", font=font_bold, foreground="#C0392B")  # red bold for negative gains
         output_text.tag_configure("gain_neutral", font=font_bold, foreground="#7F8C8D")  # gray for neutral/unknown
@@ -187,8 +189,10 @@ def calculate():
 
             for key, value in result.items():
                 line = f"{key}: {value}\n"
-                if key in ["Entry Price", "Stop-Loss Price", "Target Price"]:
+                if key in ["Entry Price" , "Target Price" , "Invested Amount (₹)" , "Expected Profit (₹)"]:
                     output_text.insert(tk.END, line, "price")
+                elif key in ["Stop-Loss Price" , "Risk per Share" , "Risk Amount (₹)"]:
+                    output_text.insert(tk.END, line, "red")
                 elif key in ["Expected % Gain", "Estimated CAGR %"]:
                     try:
                         val_float = float(value)

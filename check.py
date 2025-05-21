@@ -6,6 +6,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import csv
 
+#from pandas_ta import weights
+
+
 # --- Trade Calculator ---
 def enhanced_trade_calculator(
     capital=None,
@@ -167,10 +170,10 @@ frame_history.pack(fill="both", expand=True)
 
 output_text.tag_configure("title", font=font_bold, foreground="#0B3D91")
 output_text.tag_configure("normal", font=font_output, foreground="black")
-output_text.tag_configure("error", font=font_output, foreground="red")
-output_text.tag_configure("green_text", font=font_output, foreground="green")
-output_text.tag_configure("green", font=font_output, foreground="green")
-output_text.tag_configure("red", font=font_output, foreground="red")
+output_text.tag_configure("error", font=font_bold, foreground="red")
+output_text.tag_configure("green_text", font=font_bold, foreground="green")
+output_text.tag_configure("green", font=font_bold, foreground="green")
+output_text.tag_configure("red", font=font_bold, foreground="red")
 output_text.tag_configure("blue", font=font_output, foreground="blue")
 output_text.tag_configure("orange", font=font_output, foreground="orange")
 output_text.tag_configure("yellow", font=font_output, foreground="dark goldenrod")
