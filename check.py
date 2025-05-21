@@ -80,8 +80,8 @@ root.state("zoomed")
 # Fonts
 font_label = tkfont.Font(family="Arial", size=14)
 font_entry = tkfont.Font(family="Arial", size=14)
-font_output = tkfont.Font(family="Consolas", size=14)
-font_bold = tkfont.Font(family="Arial", size=18, weight="bold")
+font_output = tkfont.Font(family="Consolas", size=18)
+font_bold = tkfont.Font(family="Arial", size=19, weight="bold")
 
 # Frames
 frame_input = tk.Frame(root, padx=10, pady=10)
