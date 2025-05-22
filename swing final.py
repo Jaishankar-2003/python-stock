@@ -5,7 +5,6 @@ import tkinter.font as tkfont
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import csv
-
 #from pandas_ta import weights
 
 
