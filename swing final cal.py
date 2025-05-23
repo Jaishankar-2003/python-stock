@@ -57,6 +57,7 @@ def enhanced_trade_calculator(
         return "❌ Either Target Price or Reward Ratio is required."
 
     expected_profit = reward_per_share * position_size
+    net_profit_after_brokerage = expected_profit * (1 - 0.0545)
     percent_gain = (expected_profit / capital) * 100 if capital else 0
     break_even_price = entry_price + (risk_amount / position_size if position_size else 0)
     capital_usage_percent = (invested_amount / capital) * 100 if capital else 0
@@ -72,7 +73,6 @@ def enhanced_trade_calculator(
         profit_per_day = (expected_profit - risk_amount) / trade_duration
     else:
         daily_gain = cagr = reward_per_day = risk_per_day = profit_per_day = estimated_exit_date = None
-
     return {
         "Entry Price": round(entry_price, 2),
         "Stop-Loss Price": round(stop_loss_price, 2),
@@ -88,6 +88,7 @@ def enhanced_trade_calculator(
         "Risk on Invested %": round(risk_on_invested_percent, 2),
         "Risk-Adjusted Return": round(risk_adjusted_return, 2),
         "Expected Profit (₹)": round(expected_profit, 2),
+        "Net Profit After Brokerage (₹)": round(net_profit_after_brokerage, 2),
         "Expected % Gain": round(percent_gain, 2),
         "Profit per Day (₹)": round(profit_per_day, 2) if profit_per_day is not None else "N/A",
         "Risk per Day (₹)": round(risk_per_day, 2) if risk_per_day is not None else "N/A",
@@ -176,6 +177,7 @@ output_text.tag_configure("red", font=font_bold, foreground="red")
 output_text.tag_configure("blue", font=font_output, foreground="blue")
 output_text.tag_configure("orange", font=font_output, foreground="orange")
 output_text.tag_configure("yellow", font=font_output, foreground="dark goldenrod")
+output_text.tag_configure("highlight", font=font_bold, foreground="dark green")
 
 
 # Trade History
@@ -228,6 +230,8 @@ def display_output(results):
                 output_text.insert(tk.END, f"{k}: {v}\n", "orange")
             elif k in ["Break-Even Price", "Invested Amount (₹)"]:
                 output_text.insert(tk.END, f"{k}: {v}\n", "blue")
+            elif k == "Net Profit After Brokerage (₹)":
+                output_text.insert(tk.END, f"{k}: {v}\n", "highlight")
             else:
                 output_text.insert(tk.END, f"{k}: {v}\n")
         update_chart(results["Entry Price"], results["Stop-Loss Price"], results["Target Price"])
