@@ -36,7 +36,7 @@ for label_text, var in inputs.items():
     tk.Entry(left_frame, textvariable=var, font=ENTRY_FONT, width=30).pack(anchor='w')
 
 tk.Label(right_frame, text="Trade Summary & Risk Strategy", font=LABEL_FONT, bg="#f2f4f8").pack(anchor="w")
-result_box = tk.Text(right_frame, height=32, width=80, font=("Consolas", 11), wrap="word", bd=2, relief="sunken")
+result_box = tk.Text(right_frame, height=30, width=40, font=("Consolas", 11), wrap="word", bd=2, relief="sunken")
 result_box.pack(pady=10, fill="both", expand=True)
 
 def get_float(var_name, mandatory=False, default=None):
