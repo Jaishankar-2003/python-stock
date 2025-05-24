@@ -4,19 +4,54 @@ from math import floor
 
 root = tk.Tk()
 root.title("Swing Trade Position & Risk Strategy Calculator")
-root.geometry("950x650")
+root.geometry("1620x1050")
 root.configure(bg="#f2f4f8")
 
 LABEL_FONT = ("Segoe UI", 10, "bold")
 ENTRY_FONT = ("Segoe UI", 10)
 BUTTON_FONT = ("Segoe UI", 10, "bold")
 
-left_frame = tk.Frame(root, bg="#f2f4f8", padx=15, pady=15)
-left_frame.pack(side="left", fill="y")
+# === LEFT SCROLLABLE FRAME ===
+left_container = tk.Frame(root, bg="#f2f4f8")
+left_container.pack(side="left", fill="y")
 
-right_frame = tk.Frame(root, bg="#f2f4f8", padx=15, pady=15)
-right_frame.pack(side="left", fill="both", expand=True)
+left_canvas = tk.Canvas(left_container, bg="#f2f4f8", width=400, highlightthickness=0)
+left_canvas.pack(side="left", fill="y", expand=False)
 
+left_scrollbar = tk.Scrollbar(left_container, orient="vertical", command=left_canvas.yview)
+left_scrollbar.pack(side="left", fill="y")
+
+left_canvas.configure(yscrollcommand=left_scrollbar.set)
+
+left_frame = tk.Frame(left_canvas, bg="#f2f4f8", padx=15, pady=15)
+left_canvas.create_window((0, 0), window=left_frame, anchor="nw")
+
+def on_left_frame_configure(event):
+    left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+
+left_frame.bind("<Configure>", on_left_frame_configure)
+
+# === RIGHT SCROLLABLE FRAME ===
+right_container = tk.Frame(root, bg="#f2f4f8")
+right_container.pack(side="left", fill="both", expand=True)
+
+right_canvas = tk.Canvas(right_container, bg="#f2f4f8", highlightthickness=0)
+right_canvas.pack(side="left", fill="both", expand=True)
+
+right_scrollbar = tk.Scrollbar(right_container, orient="vertical", command=right_canvas.yview)
+right_scrollbar.pack(side="left", fill="y")
+
+right_canvas.configure(yscrollcommand=right_scrollbar.set)
+
+right_frame = tk.Frame(right_canvas, bg="#f2f4f8", padx=15, pady=15)
+right_canvas.create_window((0, 0), window=right_frame, anchor="nw")
+
+def on_right_frame_configure(event):
+    right_canvas.configure(scrollregion=right_canvas.bbox("all"))
+
+right_frame.bind("<Configure>", on_right_frame_configure)
+
+# --- Input fields in left_frame ---
 inputs = {
     "Entry Price (₹)": tk.StringVar(),
     "Stop Loss Price (₹) [optional if % given]": tk.StringVar(),
@@ -35,6 +70,10 @@ for label_text, var in inputs.items():
     tk.Label(left_frame, text=label_text, font=LABEL_FONT, bg="#f2f4f8").pack(anchor='w', pady=(8,2))
     tk.Entry(left_frame, textvariable=var, font=ENTRY_FONT, width=30).pack(anchor='w')
 
+calculate_btn = tk.Button(left_frame, text="Calculate Position & Risk", font=BUTTON_FONT, bg="#246bb2", fg="white", command=lambda: calculate())
+calculate_btn.pack(pady=20)
+
+# --- Result box in right_frame ---
 tk.Label(right_frame, text="Trade Summary & Risk Strategy", font=LABEL_FONT, bg="#f2f4f8").pack(anchor="w")
 result_box = tk.Text(right_frame, height=30, width=40, font=("Consolas", 11), wrap="word", bd=2, relief="sunken")
 result_box.pack(pady=10, fill="both", expand=True)
@@ -163,82 +202,73 @@ def calculate():
             result_box.tag_delete(tag)
 
         # Insert output with tags for colors
-        result_box.insert(tk.END, "🧮 POSITION SIZE & RISK STRATEGY OUTPUT\n\n", "header")
-        result_box.insert(tk.END, "🔢 Trade Input\n", "section")
+        result_box.insert(tk.END, "🧮 POSITION SIZE & RISK CALCULATION SUMMARY\n\n", "header")
 
-        # Entry price, Stop loss, Target Price
         result_box.insert(tk.END, f"Entry Price: ₹{entry_price:.2f}\n")
         result_box.insert(tk.END, f"Stop Loss Price: ₹{sl_price:.2f}\n")
-        if sl_percent is not None:
-            result_box.insert(tk.END, f" (Based on {sl_percent:.2f}% below Entry Price)\n")
+        if atr_buffer:
+            result_box.insert(tk.END, f"ATR Buffer (Half ATR): ₹{atr_buffer:.2f}\n")
+            result_box.insert(tk.END, f"Validated Stop Loss Price (with ATR buffer): ₹{validated_sl:.2f}\n")
+
         result_box.insert(tk.END, f"Target Price: ₹{target_price:.2f}\n")
-        if target_percent is not None:
-            result_box.insert(tk.END, f" (Based on {target_percent:.2f}% above Entry Price)\n")
+        result_box.insert(tk.END, f"Risk per Share: ₹{risk_per_share:.2f}\n")
+        result_box.insert(tk.END, f"Capital: ₹{capital:,.0f}\n")
+        result_box.insert(tk.END, f"Risk % of Capital: {risk_percent:.2f}%\n")
+        result_box.insert(tk.END, f"Capital Risk Limit: ₹{capital_risk_limit:,.2f}\n\n")
 
-        result_box.insert(tk.END, f"\nRisk per Share: ₹{risk_per_share:.2f}\n")
-        result_box.insert(tk.END, f"Capital Risk Limit ({risk_percent:.2f}% of ₹{capital:,.0f}): ₹{capital_risk_limit:,.2f}\n")
-        result_box.insert(tk.END, f"Total Capital: ₹{capital:,.0f}\n\n")
-
-        result_box.insert(tk.END, "📏 Position Calculation\n", "section")
-        result_box.insert(tk.END, f"Calculated Position Size: {position_size:,} shares\n")
+        result_box.insert(tk.END, f"Position Size (shares): {position_size:,}\n")
         result_box.insert(tk.END, f"Estimated Investment: ₹{estimated_investment:,.2f}\n")
-        result_box.insert(tk.END, f"Reward-to-Risk Ratio: {reward_risk_ratio:.2f}\n")
-        result_box.insert(tk.END, f"Net Potential Profit: ₹{net_potential_profit:,.2f}\n")
+        result_box.insert(tk.END, f"Reward to Risk Ratio: {reward_risk_ratio:.2f}\n")
+        result_box.insert(tk.END, f"Potential Profit: ₹{net_potential_profit:,.2f}\n\n")
 
-        risk_breach_mark = "❌" if risk_breach else "✅"
-        risk_breach_text = "Investment exceeds optimal exposure" if risk_breach else "Within optimal exposure"
-        result_box.insert(tk.END, f"Risk Breach Check: {risk_breach_mark} {risk_breach_text}\n")
-
-        result_box.insert(tk.END, f"Exposure % of Capital: {exposure_pct:.2f}%\n\n")
-
-        result_box.insert(tk.END, "🛡️ Risk Filters & Capital Control\n", "section")
-        result_box.insert(tk.END, f"Dynamic Allocation Band: {allocation_band}\n")
+        # Exposure & allocation band color coding
         if risk_breach:
-            result_box.insert(tk.END, f"Adjusted Position Size (50%): {adjusted_position_size:,} shares\n")
+            result_box.insert(tk.END, f"Exposure %: {exposure_pct:.2f}% → Exceeds max trade exposure {max_trade_exp_pct}%\n", "warning")
+            result_box.insert(tk.END, f"Allocation Band Recommendation: {allocation_band}\n", "warning")
+            result_box.insert(tk.END, f"Adjusted Position Size: {adjusted_position_size:,} shares\n")
             result_box.insert(tk.END, f"Adjusted Investment: ₹{adjusted_investment:,.2f}\n")
-            result_box.insert(tk.END, f"Exposure % after Adjustment: {exposure_after_adj:.2f}%\n")
-            result_box.insert(tk.END, f"Risk Breach After Adjustment: {'❌' if risk_breach_after_adj else '✅'}\n")
-        result_box.insert(tk.END, f"Max Trade Exposure Rule (≤{max_trade_exp_pct}%): {'✅' if max_trade_exp_ok else '❌'}\n")
-        result_box.insert(tk.END, f"Max Sector Exposure Rule (≤{max_sector_exp_pct}%): {'✅' if max_sector_exp_ok else '❌'}\n")
-        result_box.insert(tk.END, f"Drawdown Tracker (Consecutive Losses): {'✅ No breach' if drawdown_ok else '⚠️ Warning'} ({consecutive_losses} consecutive losses)\n\n")
-
-        result_box.insert(tk.END, "🕒 Market Timing Filters\n", "section")
-        result_box.insert(tk.END, f"Opening Volatility Avoidance: {'✅ Entry after 9:30 AM' if opening_volatility_ok else '❌ Check Entry Time'}\n")
-        result_box.insert(tk.END, f"Breakout Window Detected: {'✅ Between 10:00–12:00 (preferred time band)' if breakout_window_ok else '❌ No suitable window'}\n")
-        if atr_value is not None:
-            result_box.insert(tk.END, f"Volatility Monitor (ATR/IV): ✅ ATR = ₹{atr_value:.2f} → Add buffer of ₹{atr_buffer:.2f}\n")
-            result_box.insert(tk.END, f"Validated SL (ATR Adjusted): Final SL = ₹{validated_sl:.2f}\n")
         else:
-            result_box.insert(tk.END, f"Volatility Monitor (ATR/IV): ⚠️ ATR not provided\n")
+            result_box.insert(tk.END, f"Exposure %: {exposure_pct:.2f}% (within limit of {max_trade_exp_pct}%)\n", "success")
+            result_box.insert(tk.END, f"Allocation Band: {allocation_band}\n", "success")
 
-        result_box.insert(tk.END, "\n🎯 Target Optimization\n", "section")
-        result_box.insert(tk.END, f"Current Risk:Reward: {'✅' if target_rr_ok else '❌'} {reward_risk_ratio:.2f} ({'>2.5 Minimum Target'})\n")
-        result_box.insert(tk.END, f"Trail SL After Target 1.5×R: After ₹{trail_sl_price:.2f}, shift SL to ₹{entry_price:.2f}\n")
-        result_box.insert(tk.END, f"Optional Partial Booking: Consider 50% profit booking after ₹{partial_booking_price:.2f}\n\n")
+        # Additional conditions summary
+        result_box.insert(tk.END, "\n--- Additional Risk Controls & Conditions ---\n")
+        result_box.insert(tk.END, f"Max Trade Exposure OK: {'✅' if max_trade_exp_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Max Sector Exposure OK: {'✅' if max_sector_exp_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Drawdown OK (No Consecutive Losses): {'✅' if drawdown_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Opening Volatility OK: {'✅' if opening_volatility_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Breakout Window OK: {'✅' if breakout_window_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Volatility Monitor OK: {'✅' if volatility_monitor_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Target Reward Ratio >= {target_min_rr}: {'✅' if target_rr_ok else '❌'}\n")
+        result_box.insert(tk.END, f"Trail Stop Loss Price (1.5x risk): ₹{trail_sl_price:.2f}\n")
+        result_box.insert(tk.END, f"Partial Booking Price (~50% target): ₹{partial_booking_price:.2f}\n")
 
-        result_box.insert(tk.END, "✅ Final Recommendation\n", "section")
-        result_box.insert(tk.END, f"Adjust Position Size: {'✅ Trade ' + str(adjusted_position_size) + ' shares (Safe Exposure)' if risk_breach else '✅ Full Position Size OK'}\n")
-        result_box.insert(tk.END, f"Use ATR-Based SL: ₹{validated_sl:.2f}\n")
-        result_box.insert(tk.END, "Monitor Post-Entry Volatility and trail SL as R multiples achieved\n")
-        result_box.insert(tk.END, f"Expected Profit ({adjusted_position_size} shares): ₹{round((target_price - entry_price) * adjusted_position_size, 2)} (approx.)\n")
+        # Color tags for highlights
+        color_tag("header", fg="#007acc", bg="#e6f0fa")
+        color_tag("success", fg="green")
+        color_tag("warning", fg="red")
 
-        # Color tagging for better psychology
-        color_tag("header", fg="#0a64a0")
-        color_tag("section", fg="#2e4057", bg="#dbe9f4")
+        # Tag warnings and successes
+        start_idx = "1.0"
+        while True:
+            pos = result_box.search("❌", start_idx, stopindex=tk.END)
+            if not pos:
+                break
+            end_pos = f"{pos}+2c"
+            result_box.tag_add("warning", pos, end_pos)
+            start_idx = end_pos
 
-        # Highlight Risk Breach in red/yellow/green
-        if risk_breach:
-            result_box.tag_add("risk_breach", "17.0", "18.0")
-            color_tag("risk_breach", fg="red", bg="#ffdddd")
-        else:
-            result_box.tag_add("risk_breach", "17.0", "18.0")
-            color_tag("risk_breach", fg="green", bg="#ddffdd")
+        start_idx = "1.0"
+        while True:
+            pos = result_box.search("✅", start_idx, stopindex=tk.END)
+            if not pos:
+                break
+            end_pos = f"{pos}+2c"
+            result_box.tag_add("success", pos, end_pos)
+            start_idx = end_pos
 
-    except ValueError as e:
+    except Exception as e:
         messagebox.showerror("Input Error", str(e))
-        return
-
-calculate_btn = tk.Button(left_frame, text="Calculate Position & Risk", font=BUTTON_FONT, bg="#246bb2", fg="white", command=calculate)
-calculate_btn.pack(pady=20)
+        result_box.delete("1.0", tk.END)
 
 root.mainloop()
