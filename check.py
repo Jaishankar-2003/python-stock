@@ -43,7 +43,7 @@ right_scrollbar.pack(side="left", fill="y")
 
 right_canvas.configure(yscrollcommand=right_scrollbar.set)
 
-right_frame = tk.Frame(right_canvas, bg="#f2f4f8", padx=15, pady=15)
+right_frame = tk.Frame(right_canvas, bg="#f2f4f8", padx=20, pady=20)
 right_canvas.create_window((0, 0), window=right_frame, anchor="nw")
 
 def on_right_frame_configure(event):
@@ -76,7 +76,7 @@ calculate_btn.pack(pady=20)
 # --- Result box in right_frame ---
 tk.Label(right_frame, text="Trade Summary & Risk Strategy", font=LABEL_FONT, bg="#f2f4f8").pack(anchor="w")
 result_box = tk.Text(right_frame, height=30, width=40, font=("Consolas", 11), wrap="word", bd=2, relief="sunken")
-result_box.pack(pady=10, fill="both", expand=True)
+result_box.pack(pady=15, fill="both", expand=True)
 
 def get_float(var_name, mandatory=False, default=None):
     val = inputs[var_name].get().strip()
