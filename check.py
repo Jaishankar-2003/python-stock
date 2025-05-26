@@ -2,8 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from math import floor
 import webbrowser
-from datetime import datetime
-
+from datetime import datetime # Added missing import
 
 class SwingTradeCalculator:
     def __init__(self, root):
@@ -17,6 +16,7 @@ class SwingTradeCalculator:
         self.style.configure("TFrame", background="#f0f2f5")
         self.style.configure("TLabel", background="#f0f2f5", font=("Segoe UI", 10, "bold"))
         self.style.configure("TButton", font=("Segoe UI", 10, "bold"), padding=5)
+        # Specific styles for buttons/labels that need distinct colors
         self.style.configure("Red.TLabel", foreground="#e74c3c", background="#f0f2f5")
         self.style.configure("Green.TLabel", foreground="#27ae60", background="#f0f2f5")
         self.style.configure("Blue.TLabel", foreground="#3498db", background="#f0f2f5")
@@ -37,10 +37,10 @@ class SwingTradeCalculator:
         self.max_drawdown = 0
         self.current_drawdown = 0
         self.equity_curve = []
-        self.last_trade_time = None
+        self.last_trade_time = None # Initialize last trade time
 
         self.create_widgets()
-        self.setup_emotional_colors()  # Moved here
+        self.setup_emotional_colors()
         self.setup_tabs()
 
     def setup_emotional_colors(self):
@@ -211,8 +211,6 @@ class SwingTradeCalculator:
                                 font=("Segoe UI", 10))
 
             rb.pack(anchor='w', padx=5)
-            # The fg option is already set during creation, no need for configure(foreground=...)
-            # rb.configure(foreground=self.emotion_colors.get(state, "#000000")) # Removed redundant line
 
         # Psychology tips
         tips_frame = ttk.LabelFrame(main_frame, text="Psychology Tips", padding=10)
@@ -313,7 +311,6 @@ class SwingTradeCalculator:
             rb = ttk.Radiobutton(emotion_frame, text=emotion, variable=self.trade_emotion,
                                  value=emotion, style=style_name) # Apply the custom style
             rb.pack(side="left", padx=5)
-            # Removed the problematic rb.configure(foreground=...) line as style handles it
 
         # Save journal button
         ttk.Button(main_frame, text="Save Journal Entry", command=self.save_journal_entry).pack(pady=10)
@@ -575,7 +572,7 @@ class SwingTradeCalculator:
     def record_trade_outcome(self, is_win):
         # Update trade statistics
         self.total_trades += 1
-        self.last_trade_time = datetime.now()
+        self.last_trade_time = datetime.now() # Update last trade time
 
         if is_win:
             self.winning_trades += 1
@@ -612,7 +609,7 @@ class SwingTradeCalculator:
             self.max_drawdown = 0
             self.current_drawdown = 0
             self.equity_curve = []
-            self.last_trade_time = None
+            self.last_trade_time = None # Reset last trade time on stats reset
 
             self.inputs["Consecutive Losses"].set("0")
             self.inputs["Current Drawdown %"].set("0")
@@ -677,15 +674,17 @@ class SwingTradeCalculator:
 
     def start_meditation_timer(self):
         messagebox.showinfo("Meditation Timer",
-                            "Begin 5-minute meditation.\n\nClose this box to start.\nUse a timer or deep breathing app.")
+                             "Begin 5-minute meditation.\n\nClose this box to start.\nUse a timer or deep breathing app.")
         # A real timer or sound alert could be integrated in future versions.
 
     def get_float(self, label, mandatory=True, default=None):
         value = self.inputs[label].get().strip()
-        if not value and mandatory and default is None:
-            raise ValueError(f"{label} is required.")
-        if not value and default is not None:
-            return default
+        if not value: # If the input string is empty
+            if mandatory: # And it's a mandatory field
+                raise ValueError(f"{label} is required.")
+            else: # And it's an optional field
+                return default # Return the default value (which is None if not provided)
+        # If value is not empty, try to convert it to float
         try:
             return float(value)
         except ValueError:
@@ -693,10 +692,12 @@ class SwingTradeCalculator:
 
     def get_int(self, label, mandatory=True, default=None):
         value = self.inputs[label].get().strip()
-        if not value and mandatory and default is None:
-            raise ValueError(f"{label} is required.")
-        if not value and default is not None:
-            return default
+        if not value: # If the input string is empty
+            if mandatory: # And it's a mandatory field
+                raise ValueError(f"{label} is required.")
+            else: # And it's an optional field
+                return default # Return the default value (which is None if not provided)
+        # If value is not empty, try to convert it to int
         try:
             return int(value)
         except ValueError:
