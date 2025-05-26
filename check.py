@@ -40,8 +40,8 @@ class SwingTradeCalculator:
         self.last_trade_time = None
 
         self.create_widgets()
+        self.setup_emotional_colors()  # Moved here
         self.setup_tabs()
-        self.setup_emotional_colors()
 
     def setup_emotional_colors(self):
         # Emotional state color mapping
@@ -195,7 +195,6 @@ class SwingTradeCalculator:
                    style="Yellow.TLabel").pack(side="left", padx=5)
 
     def setup_psychology_tab(self):
-        # Psychology tips and exercises
         main_frame = ttk.Frame(self.psychology_tab)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -207,11 +206,13 @@ class SwingTradeCalculator:
         states = ["Confident", "Neutral", "Anxious", "Fearful", "Greedy", "Reckless"]
 
         for state in states:
-            rb = ttk.Radiobutton(state_frame, text=state, variable=self.emotional_state,
-                                 value=state)
+            rb = tk.Radiobutton(state_frame, text=state, variable=self.emotional_state, value=state,
+                                bg="#f0f2f5", fg=self.emotion_colors.get(state, "#000000"),
+                                font=("Segoe UI", 10))
+
             rb.pack(anchor='w', padx=5)
-            # Dynamically set the label color based on emotion
-            rb.configure(foreground=self.emotion_colors.get(state, "#000000"))
+            # The fg option is already set during creation, no need for configure(foreground=...)
+            # rb.configure(foreground=self.emotion_colors.get(state, "#000000")) # Removed redundant line
 
         # Psychology tips
         tips_frame = ttk.LabelFrame(main_frame, text="Psychology Tips", padding=10)
@@ -274,7 +275,6 @@ class SwingTradeCalculator:
                    command=self.start_meditation_timer).pack(pady=5)
 
     def setup_journal_tab(self):
-        # Trade journal section
         main_frame = ttk.Frame(self.journal_tab)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -294,7 +294,7 @@ class SwingTradeCalculator:
 
         # Emotional state during trade with color coding
         ttk.Label(main_frame, text="Emotional State During Trade:", font=self.HEADER_FONT).pack(anchor='w',
-                                                                                                pady=(10, 0))
+                                                                                               pady=(10, 0))
 
         emotion_frame = ttk.Frame(main_frame)
         emotion_frame.pack(fill="x")
@@ -303,10 +303,17 @@ class SwingTradeCalculator:
         emotions = ["Confident", "Anxious", "Fearful", "Greedy", "Patient", "Impulsive", "Disciplined"]
 
         for emotion in emotions:
+            # Create a specific style for each emotion's radio button
+            style_name = f"{emotion.replace(' ', '')}.TRadiobutton"
+            self.style.configure(style_name,
+                                 foreground=self.emotion_colors.get(emotion, "#000000"),
+                                 background="#f0f2f5", # Ensure background is consistent
+                                 font=("Segoe UI", 10))
+
             rb = ttk.Radiobutton(emotion_frame, text=emotion, variable=self.trade_emotion,
-                                 value=emotion)
+                                 value=emotion, style=style_name) # Apply the custom style
             rb.pack(side="left", padx=5)
-            rb.configure(foreground=self.emotion_colors.get(emotion, "#000000"))
+            # Removed the problematic rb.configure(foreground=...) line as style handles it
 
         # Save journal button
         ttk.Button(main_frame, text="Save Journal Entry", command=self.save_journal_entry).pack(pady=10)
