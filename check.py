@@ -696,7 +696,7 @@ class SwingTradeCalculator:
             raise ValueError(f"{label} must be an integer.")
 
     # At the end of file, OUTSIDE the class
-    if __name__ == "__main__":
-        root = tk.Tk()
-        app = SwingTradeCalculator(root)
-        root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SwingTradeCalculator(root)
+    root.mainloop()
