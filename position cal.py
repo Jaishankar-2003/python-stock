@@ -4,7 +4,7 @@ from math import floor
 
 root = tk.Tk()
 root.title("Swing Trade Position & Risk Strategy Calculator")
-root.geometry("1620x1050")
+root.geometry("1920x1050")  # Increased width
 root.configure(bg="#f2f4f8")
 
 LABEL_FONT = ("Segoe UI", 10, "bold")
@@ -26,8 +26,10 @@ left_canvas.configure(yscrollcommand=left_scrollbar.set)
 left_frame = tk.Frame(left_canvas, bg="#f2f4f8", padx=15, pady=15)
 left_canvas.create_window((0, 0), window=left_frame, anchor="nw")
 
+
 def on_left_frame_configure(event):
     left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+
 
 left_frame.bind("<Configure>", on_left_frame_configure)
 
@@ -46,8 +48,10 @@ right_canvas.configure(yscrollcommand=right_scrollbar.set)
 right_frame = tk.Frame(right_canvas, bg="#f2f4f8", padx=20, pady=20)
 right_canvas.create_window((0, 0), window=right_frame, anchor="nw")
 
+
 def on_right_frame_configure(event):
     right_canvas.configure(scrollregion=right_canvas.bbox("all"))
+
 
 right_frame.bind("<Configure>", on_right_frame_configure)
 
@@ -61,22 +65,26 @@ inputs = {
     "Capital (₹) [optional]": tk.StringVar(value="500000"),
     "Risk % of Capital [optional]": tk.StringVar(value="0.5"),
     "ATR Value (₹) [Optional]": tk.StringVar(),
+    "Manual Position Size (shares) [optional]": tk.StringVar(),
     "Max Trade Exposure % (Default 40%)": tk.StringVar(value="40"),
     "Max Sector Exposure % (Default 60%)": tk.StringVar(value="60"),
     "Consecutive Losses (Drawdown Tracker)": tk.StringVar(value="0"),
 }
 
 for label_text, var in inputs.items():
-    tk.Label(left_frame, text=label_text, font=LABEL_FONT, bg="#f2f4f8").pack(anchor='w', pady=(8,2))
+    tk.Label(left_frame, text=label_text, font=LABEL_FONT, bg="#f2f4f8").pack(anchor='w', pady=(8, 2))
     tk.Entry(left_frame, textvariable=var, font=ENTRY_FONT, width=30).pack(anchor='w')
 
-calculate_btn = tk.Button(left_frame, text="Calculate Position & Risk", font=BUTTON_FONT, bg="#246bb2", fg="white", command=lambda: calculate())
+calculate_btn = tk.Button(left_frame, text="Calculate Position & Risk", font=BUTTON_FONT, bg="#246bb2", fg="white",
+                          command=lambda: calculate())
 calculate_btn.pack(pady=20)
 
 # --- Result box in right_frame ---
 tk.Label(right_frame, text="Trade Summary & Risk Strategy", font=LABEL_FONT, bg="#f2f4f8").pack(anchor="w")
-result_box = tk.Text(right_frame, height=30, width=40, font=("Consolas", 11), wrap="word", bd=2, relief="sunken")
+result_box = tk.Text(right_frame, height=30, width=100, font=("Consolas", 11), wrap="word", bd=2,
+                     relief="sunken")  # Increased width
 result_box.pack(pady=15, fill="both", expand=True)
+
 
 def get_float(var_name, mandatory=False, default=None):
     val = inputs[var_name].get().strip()
@@ -90,6 +98,7 @@ def get_float(var_name, mandatory=False, default=None):
     except ValueError:
         raise ValueError(f"Invalid number for {var_name}: '{val}'")
 
+
 def get_int(var_name, mandatory=False, default=None):
     val = inputs[var_name].get().strip()
     if not val:
@@ -102,9 +111,11 @@ def get_int(var_name, mandatory=False, default=None):
     except ValueError:
         raise ValueError(f"Invalid integer for {var_name}: '{val}'")
 
+
 def color_tag(tag_name, fg=None, bg=None):
     if fg or bg:
         result_box.tag_config(tag_name, foreground=fg, background=bg)
+
 
 def calculate():
     try:
@@ -141,6 +152,7 @@ def calculate():
         capital = get_float("Capital (₹) [optional]", mandatory=False, default=500000)
         risk_percent = get_float("Risk % of Capital [optional]", mandatory=False, default=0.5)
         atr_value = get_float("ATR Value (₹) [Optional]", mandatory=False)
+        manual_position_size = get_int("Manual Position Size (shares) [optional]", mandatory=False)
         max_trade_exp_pct = get_float("Max Trade Exposure % (Default 40%)", mandatory=False, default=40)
         max_sector_exp_pct = get_float("Max Sector Exposure % (Default 60%)", mandatory=False, default=60)
         consecutive_losses = get_int("Consecutive Losses (Drawdown Tracker)", mandatory=False, default=0)
@@ -152,8 +164,14 @@ def calculate():
 
         capital_risk_limit = capital * (risk_percent / 100)
 
-        # Position size
-        position_size = floor(capital_risk_limit / risk_per_share)
+        # Position size - use manual if provided, otherwise calculate
+        if manual_position_size is not None and manual_position_size > 0:
+            position_size = manual_position_size
+            manual_override = True
+        else:
+            position_size = floor(capital_risk_limit / risk_per_share)
+            manual_override = False
+
         estimated_investment = position_size * entry_price
 
         reward_risk_ratio = (target_price - entry_price) / risk_per_share
@@ -216,19 +234,27 @@ def calculate():
         result_box.insert(tk.END, f"Risk % of Capital: {risk_percent:.2f}%\n")
         result_box.insert(tk.END, f"Capital Risk Limit: ₹{capital_risk_limit:,.2f}\n\n")
 
-        result_box.insert(tk.END, f"Position Size (shares): {position_size:,}\n")
+        if manual_override:
+            result_box.insert(tk.END, "⚠️ MANUAL POSITION SIZE OVERRIDE APPLIED ⚠️\n", "warning")
+            result_box.insert(tk.END, f"Manual Position Size (shares): {position_size:,}\n")
+        else:
+            result_box.insert(tk.END, f"Calculated Position Size (shares): {position_size:,}\n")
+
         result_box.insert(tk.END, f"Estimated Investment: ₹{estimated_investment:,.2f}\n")
         result_box.insert(tk.END, f"Reward to Risk Ratio: {reward_risk_ratio:.2f}\n")
         result_box.insert(tk.END, f"Potential Profit: ₹{net_potential_profit:,.2f}\n\n")
 
         # Exposure & allocation band color coding
         if risk_breach:
-            result_box.insert(tk.END, f"Exposure %: {exposure_pct:.2f}% → Exceeds max trade exposure {max_trade_exp_pct}%\n", "warning")
+            result_box.insert(tk.END,
+                              f"Exposure %: {exposure_pct:.2f}% → Exceeds max trade exposure {max_trade_exp_pct}%\n",
+                              "warning")
             result_box.insert(tk.END, f"Allocation Band Recommendation: {allocation_band}\n", "warning")
             result_box.insert(tk.END, f"Adjusted Position Size: {adjusted_position_size:,} shares\n")
             result_box.insert(tk.END, f"Adjusted Investment: ₹{adjusted_investment:,.2f}\n")
         else:
-            result_box.insert(tk.END, f"Exposure %: {exposure_pct:.2f}% (within limit of {max_trade_exp_pct}%)\n", "success")
+            result_box.insert(tk.END, f"Exposure %: {exposure_pct:.2f}% (within limit of {max_trade_exp_pct}%)\n",
+                              "success")
             result_box.insert(tk.END, f"Allocation Band: {allocation_band}\n", "success")
 
         # Additional conditions summary
@@ -270,5 +296,6 @@ def calculate():
     except Exception as e:
         messagebox.showerror("Input Error", str(e))
         result_box.delete("1.0", tk.END)
+
 
 root.mainloop()
