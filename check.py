@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from math import floor
 import webbrowser
+from datetime import datetime
 
 
 class SwingTradeCalculator:
@@ -9,16 +10,18 @@ class SwingTradeCalculator:
         self.root = root
         self.root.title("Advanced Swing Trade Position & Risk Manager")
         self.root.geometry("1920x1050")
-        self.root.configure(bg="#f2f4f8")
+        self.root.configure(bg="#f0f2f5")
 
         # Style configuration
         self.style = ttk.Style()
-        self.style.configure("TFrame", background="#f2f4f8")
-        self.style.configure("TLabel", background="#f2f4f8", font=("Segoe UI", 10, "bold"))
+        self.style.configure("TFrame", background="#f0f2f5")
+        self.style.configure("TLabel", background="#f0f2f5", font=("Segoe UI", 10, "bold"))
         self.style.configure("TButton", font=("Segoe UI", 10, "bold"), padding=5)
-        self.style.configure("Red.TLabel", foreground="red", background="#f2f4f8")
-        self.style.configure("Green.TLabel", foreground="green", background="#f2f4f8")
-        self.style.configure("Yellow.TLabel", foreground="#b8860b", background="#f2f4f8")
+        self.style.configure("Red.TLabel", foreground="#e74c3c", background="#f0f2f5")
+        self.style.configure("Green.TLabel", foreground="#27ae60", background="#f0f2f5")
+        self.style.configure("Blue.TLabel", foreground="#3498db", background="#f0f2f5")
+        self.style.configure("Yellow.TLabel", foreground="#f39c12", background="#f0f2f5")
+        self.style.configure("Purple.TLabel", foreground="#9b59b6", background="#f0f2f5")
 
         # Fonts
         self.LABEL_FONT = ("Segoe UI", 10, "bold")
@@ -34,9 +37,25 @@ class SwingTradeCalculator:
         self.max_drawdown = 0
         self.current_drawdown = 0
         self.equity_curve = []
+        self.last_trade_time = None
 
         self.create_widgets()
         self.setup_tabs()
+        self.setup_emotional_colors()
+
+    def setup_emotional_colors(self):
+        # Emotional state color mapping
+        self.emotion_colors = {
+            "Confident": "#2ecc71",  # Green
+            "Neutral": "#3498db",  # Blue
+            "Anxious": "#f39c12",  # Orange
+            "Fearful": "#e74c3c",  # Red
+            "Greedy": "#9b59b6",  # Purple
+            "Reckless": "#d35400",  # Dark orange
+            "Patient": "#1abc9c",  # Teal
+            "Impulsive": "#e67e22",  # Carrot
+            "Disciplined": "#27ae60"  # Dark green
+        }
 
     def create_widgets(self):
         # Main container
@@ -69,7 +88,7 @@ class SwingTradeCalculator:
         left_container = ttk.Frame(self.calculator_tab)
         left_container.pack(side="left", fill="y")
 
-        left_canvas = tk.Canvas(left_container, bg="#f2f4f8", width=400, highlightthickness=0)
+        left_canvas = tk.Canvas(left_container, bg="#f0f2f5", width=400, highlightthickness=0)
         left_canvas.pack(side="left", fill="y", expand=False)
 
         left_scrollbar = ttk.Scrollbar(left_container, orient="vertical", command=left_canvas.yview)
@@ -89,7 +108,7 @@ class SwingTradeCalculator:
         right_container = ttk.Frame(self.calculator_tab)
         right_container.pack(side="left", fill="both", expand=True)
 
-        right_canvas = tk.Canvas(right_container, bg="#f2f4f8", highlightthickness=0)
+        right_canvas = tk.Canvas(right_container, bg="#f0f2f5", highlightthickness=0)
         right_canvas.pack(side="left", fill="both", expand=True)
 
         right_scrollbar = ttk.Scrollbar(right_container, orient="vertical", command=right_canvas.yview)
@@ -145,33 +164,42 @@ class SwingTradeCalculator:
         ttk.Button(left_frame, text="Calculate Position & Risk",
                    command=self.calculate, style="TButton").pack(pady=20)
 
-        # Result box
+        # Result box with enhanced styling
         self.result_box = tk.Text(right_frame, height=30, width=100, font=("Consolas", 11),
-                                  wrap="word", bd=2, relief="sunken")
+                                  wrap="word", bd=2, relief="sunken", bg="#ffffff", padx=10, pady=10)
         self.result_box.pack(fill="both", expand=True, pady=10)
 
-        # Configure text tags for styling
-        self.result_box.tag_config("header", foreground="#007acc", font=("Segoe UI", 12, "bold"))
-        self.result_box.tag_config("subheader", font=("Segoe UI", 10, "bold"))
-        self.result_box.tag_config("warning", foreground="red")
-        self.result_box.tag_config("success", foreground="green")
+        # Configure text tags for emotional coloring
+        self.result_box.tag_config("header", foreground="#2c3e50", font=("Segoe UI", 14, "bold"))
+        self.result_box.tag_config("subheader", foreground="#34495e", font=("Segoe UI", 12, "bold"))
+        self.result_box.tag_config("positive", foreground="#27ae60")  # Green
+        self.result_box.tag_config("negative", foreground="#e74c3c")  # Red
+        self.result_box.tag_config("warning", foreground="#f39c12")  # Orange
+        self.result_box.tag_config("info", foreground="#3498db")  # Blue
+        self.result_box.tag_config("highlight", foreground="#9b59b6")  # Purple
+        self.result_box.tag_config("neutral", foreground="#7f8c8d")  # Gray
+
+        # Emotional state tags
+        for emotion, color in self.emotion_colors.items():
+            self.result_box.tag_config(f"emotion_{emotion.lower()}", foreground=color)
 
         # Trade action buttons
         btn_frame = ttk.Frame(right_frame)
         btn_frame.pack(fill="x", pady=10)
 
-        ttk.Button(btn_frame, text="Record Win", command=lambda: self.record_trade_outcome(True)).pack(side="left",
-                                                                                                       padx=5)
-        ttk.Button(btn_frame, text="Record Loss", command=lambda: self.record_trade_outcome(False)).pack(side="left",
-                                                                                                         padx=5)
-        ttk.Button(btn_frame, text="Reset Stats", command=self.reset_stats).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Record Win", command=lambda: self.record_trade_outcome(True),
+                   style="Green.TLabel").pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Record Loss", command=lambda: self.record_trade_outcome(False),
+                   style="Red.TLabel").pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Reset Stats", command=self.reset_stats,
+                   style="Yellow.TLabel").pack(side="left", padx=5)
 
     def setup_psychology_tab(self):
         # Psychology tips and exercises
         main_frame = ttk.Frame(self.psychology_tab)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Emotional state assessment
+        # Emotional state assessment with color coding
         state_frame = ttk.LabelFrame(main_frame, text="Current Emotional State", padding=10)
         state_frame.pack(fill="x", pady=10)
 
@@ -179,35 +207,68 @@ class SwingTradeCalculator:
         states = ["Confident", "Neutral", "Anxious", "Fearful", "Greedy", "Reckless"]
 
         for state in states:
-            ttk.Radiobutton(state_frame, text=state, variable=self.emotional_state,
-                            value=state).pack(anchor='w', padx=5)
+            rb = ttk.Radiobutton(state_frame, text=state, variable=self.emotional_state,
+                                 value=state)
+            rb.pack(anchor='w', padx=5)
+            # Dynamically set the label color based on emotion
+            rb.configure(foreground=self.emotion_colors.get(state, "#000000"))
 
         # Psychology tips
         tips_frame = ttk.LabelFrame(main_frame, text="Psychology Tips", padding=10)
         tips_frame.pack(fill="both", expand=True, pady=10)
 
         psychology_tips = [
-            "✅ Stick to your trading plan no matter what",
-            "✅ Take breaks after consecutive losses",
-            "✅ Journal every trade to identify emotional patterns",
-            "✅ Practice meditation to improve discipline",
-            "✅ Set realistic expectations - trading is a marathon",
-            "✅ Avoid revenge trading after losses",
-            "✅ Celebrate process over outcomes",
-            "✅ Visualize successful trades before executing"
+            ("Stick to your trading plan no matter what", "positive"),
+            ("Take breaks after consecutive losses", "warning"),
+            ("Journal every trade to identify emotional patterns", "info"),
+            ("Practice meditation to improve discipline", "highlight"),
+            ("Set realistic expectations - trading is a marathon", "neutral"),
+            ("Avoid revenge trading after losses", "negative"),
+            ("Celebrate process over outcomes", "positive"),
+            ("Visualize successful trades before executing", "info")
         ]
 
-        for tip in psychology_tips:
-            ttk.Label(tips_frame, text=tip).pack(anchor='w', pady=2)
+        for tip, tag in psychology_tips:
+            label = tk.Label(tips_frame, text=f"• {tip}", bg="#f0f2f5",
+                             font=("Segoe UI", 10), anchor='w')
+            label.pack(fill='x', pady=2)
+            # Apply color based on tag
+            if tag == "positive":
+                label.config(fg="#27ae60")
+            elif tag == "negative":
+                label.config(fg="#e74c3c")
+            elif tag == "warning":
+                label.config(fg="#f39c12")
+            elif tag == "info":
+                label.config(fg="#3498db")
+            elif tag == "highlight":
+                label.config(fg="#9b59b6")
+            else:
+                label.config(fg="#7f8c8d")
 
         # Breathing exercise
         breath_frame = ttk.LabelFrame(main_frame, text="Calming Exercise (4-7-8 Breathing)", padding=10)
         breath_frame.pack(fill="x", pady=10)
 
-        ttk.Label(breath_frame, text="1. Inhale deeply for 4 seconds").pack(anchor='w')
-        ttk.Label(breath_frame, text="2. Hold breath for 7 seconds").pack(anchor='w')
-        ttk.Label(breath_frame, text="3. Exhale completely for 8 seconds").pack(anchor='w')
-        ttk.Label(breath_frame, text="Repeat 4 times before trading").pack(anchor='w')
+        steps = [
+            ("1. Inhale deeply for 4 seconds", "info"),
+            ("2. Hold breath for 7 seconds", "highlight"),
+            ("3. Exhale completely for 8 seconds", "positive"),
+            ("Repeat 4 times before trading", "neutral")
+        ]
+
+        for step, tag in steps:
+            label = tk.Label(breath_frame, text=step, bg="#f0f2f5",
+                             font=("Segoe UI", 10), anchor='w')
+            label.pack(fill='x', pady=2)
+            if tag == "positive":
+                label.config(fg="#27ae60")
+            elif tag == "info":
+                label.config(fg="#3498db")
+            elif tag == "highlight":
+                label.config(fg="#9b59b6")
+            else:
+                label.config(fg="#7f8c8d")
 
         ttk.Button(breath_frame, text="Start 5-Minute Meditation Timer",
                    command=self.start_meditation_timer).pack(pady=5)
@@ -220,25 +281,32 @@ class SwingTradeCalculator:
         # Journal entry fields
         ttk.Label(main_frame, text="Trade Notes:", font=self.HEADER_FONT).pack(anchor='w')
 
-        self.trade_notes = tk.Text(main_frame, height=10, width=80, wrap="word", font=self.ENTRY_FONT)
+        self.trade_notes = tk.Text(main_frame, height=10, width=80, wrap="word",
+                                   font=self.ENTRY_FONT, bg="white")
         self.trade_notes.pack(fill="x", pady=5)
 
         # Lessons learned
         ttk.Label(main_frame, text="Lessons Learned:", font=self.HEADER_FONT).pack(anchor='w', pady=(10, 0))
 
-        self.lessons_learned = tk.Text(main_frame, height=5, width=80, wrap="word", font=self.ENTRY_FONT)
+        self.lessons_learned = tk.Text(main_frame, height=5, width=80, wrap="word",
+                                       font=self.ENTRY_FONT, bg="white")
         self.lessons_learned.pack(fill="x", pady=5)
 
-        # Emotional state during trade
+        # Emotional state during trade with color coding
         ttk.Label(main_frame, text="Emotional State During Trade:", font=self.HEADER_FONT).pack(anchor='w',
                                                                                                 pady=(10, 0))
+
+        emotion_frame = ttk.Frame(main_frame)
+        emotion_frame.pack(fill="x")
 
         self.trade_emotion = tk.StringVar()
         emotions = ["Confident", "Anxious", "Fearful", "Greedy", "Patient", "Impulsive", "Disciplined"]
 
         for emotion in emotions:
-            ttk.Radiobutton(main_frame, text=emotion, variable=self.trade_emotion,
-                            value=emotion).pack(anchor='w', padx=5)
+            rb = ttk.Radiobutton(emotion_frame, text=emotion, variable=self.trade_emotion,
+                                 value=emotion)
+            rb.pack(side="left", padx=5)
+            rb.configure(foreground=self.emotion_colors.get(emotion, "#000000"))
 
         # Save journal button
         ttk.Button(main_frame, text="Save Journal Entry", command=self.save_journal_entry).pack(pady=10)
@@ -247,7 +315,7 @@ class SwingTradeCalculator:
         ttk.Label(main_frame, text="Previous Entries:", font=self.HEADER_FONT).pack(anchor='w', pady=(10, 0))
 
         self.journal_display = tk.Text(main_frame, height=15, width=80, wrap="word",
-                                       font=("Consolas", 10), state="disabled")
+                                       font=("Consolas", 10), state="disabled", bg="#f8f9fa")
         self.journal_display.pack(fill="both", expand=True, pady=5)
 
     def setup_stats_tab(self):
@@ -255,31 +323,39 @@ class SwingTradeCalculator:
         main_frame = ttk.Frame(self.stats_tab)
         main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Stats display
+        # Stats display with enhanced styling
         self.stats_text = tk.Text(main_frame, height=20, width=80, wrap="word",
-                                  font=("Consolas", 11), state="disabled")
+                                  font=("Consolas", 11), state="disabled", bg="#f8f9fa")
         self.stats_text.pack(fill="both", expand=True)
+
+        # Configure tags for stats text
+        self.stats_text.tag_config("header", foreground="#2c3e50", font=("Segoe UI", 14, "bold"))
+        self.stats_text.tag_config("positive", foreground="#27ae60")
+        self.stats_text.tag_config("negative", foreground="#e74c3c")
+        self.stats_text.tag_config("warning", foreground="#f39c12")
+        self.stats_text.tag_config("neutral", foreground="#7f8c8d")
 
         # Update stats display
         self.update_stats_display()
 
-        # Resources section
+        # Resources section with colored links
         resources_frame = ttk.LabelFrame(main_frame, text="Trading Psychology Resources", padding=10)
         resources_frame.pack(fill="x", pady=10)
 
         resources = [
-            ("Trading in the Zone - Mark Douglas",
+            ("Trading in the Zone - Mark Douglas", "#3498db",
              "https://www.amazon.com/Trading-Zone-Confidence-Discipline-Attitude/dp/0735201447"),
-            ("The Daily Trading Coach - Brett Steenbarger",
+            ("The Daily Trading Coach - Brett Steenbarger", "#3498db",
              "https://www.amazon.com/Daily-Trading-Coach-Lessons-Developing/dp/0470443460"),
-            ("Market Wizards - Jack Schwager",
+            ("Market Wizards - Jack Schwager", "#3498db",
              "https://www.amazon.com/Market-Wizards-Updated-Interviews-Traders/dp/1118273052"),
-            ("Mind Over Markets - James Dalton",
+            ("Mind Over Markets - James Dalton", "#3498db",
              "https://www.amazon.com/Mind-Over-Markets-Updated-Auction/dp/1118809238")
         ]
 
-        for text, url in resources:
-            link = ttk.Label(resources_frame, text=text, cursor="hand2", foreground="blue")
+        for text, color, url in resources:
+            link = tk.Label(resources_frame, text=f"• {text}", cursor="hand2",
+                            fg=color, bg="#f0f2f5", font=("Segoe UI", 10))
             link.pack(anchor='w', pady=2)
             link.bind("<Button-1>", lambda e, u=url: webbrowser.open_new(u))
 
@@ -297,9 +373,8 @@ class SwingTradeCalculator:
             elif sl_price is None and sl_percent is not None:
                 sl_price = round(entry_price * (1 - sl_percent / 100), 2)
             elif sl_price is not None and sl_percent is not None:
-                # Both given, prefer price but warn if inconsistent
                 calculated_sl_percent = (entry_price - sl_price) / entry_price * 100
-                if abs(calculated_sl_percent - sl_percent) > 0.5:  # More than 0.5% difference
+                if abs(calculated_sl_percent - sl_percent) > 0.5:
                     messagebox.showwarning("Inconsistent Input",
                                            f"Stop Loss price ({sl_price}) and percentage ({sl_percent}%) don't match.\n"
                                            f"Using price value ({sl_price}). Calculated percentage is {calculated_sl_percent:.2f}%")
@@ -313,9 +388,8 @@ class SwingTradeCalculator:
             elif target_price is None and target_percent is not None:
                 target_price = round(entry_price * (1 + target_percent / 100), 2)
             elif target_price is not None and target_percent is not None:
-                # Both given, prefer price but warn if inconsistent
                 calculated_target_percent = (target_price - entry_price) / entry_price * 100
-                if abs(calculated_target_percent - target_percent) > 0.5:  # More than 0.5% difference
+                if abs(calculated_target_percent - target_percent) > 0.5:
                     messagebox.showwarning("Inconsistent Input",
                                            f"Target price ({target_price}) and percentage ({target_percent}%) don't match.\n"
                                            f"Using price value ({target_price}). Calculated percentage is {calculated_target_percent:.2f}%")
@@ -340,8 +414,8 @@ class SwingTradeCalculator:
 
             # Dynamic risk adjustment based on drawdown
             risk_adjustment_factor = 1.0
-            if current_drawdown > 5:  # Reduce risk if in drawdown
-                risk_adjustment_factor = max(0.5, 1 - (current_drawdown / 20))  # Reduce by up to 50%
+            if current_drawdown > 5:
+                risk_adjustment_factor = max(0.5, 1 - (current_drawdown / 20))
                 risk_percent *= risk_adjustment_factor
                 messagebox.showinfo("Risk Adjusted",
                                     f"Reduced risk to {risk_percent:.2f}% due to {current_drawdown:.1f}% drawdown")
@@ -375,92 +449,126 @@ class SwingTradeCalculator:
 
             # Emotional impact assessment
             emotional_impact = "Moderate"
-            if abs(net_potential_loss) > capital * 0.02:  # More than 2% of capital at risk
+            emotional_impact_color = "warning"
+            if abs(net_potential_loss) > capital * 0.02:
                 emotional_impact = "High"
-            elif abs(net_potential_loss) < capital * 0.005:  # Less than 0.5% of capital at risk
+                emotional_impact_color = "negative"
+            elif abs(net_potential_loss) < capital * 0.005:
                 emotional_impact = "Low"
+                emotional_impact_color = "positive"
 
-            # Prepare results
+            # Prepare results with enhanced coloring
+            self.result_box.config(state="normal")
             self.result_box.delete("1.0", tk.END)
 
-            # Header
-            self.result_box.insert(tk.END, "🧮 ADVANCED POSITION & RISK ANALYSIS\n\n", "header")
+            # Header with timestamp
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            self.result_box.insert(tk.END, f"🧮 ADVANCED POSITION & RISK ANALYSIS - {now}\n\n", "header")
 
             # Trade details
             self.result_box.insert(tk.END, "📊 Trade Parameters:\n", "subheader")
-            self.result_box.insert(tk.END, f"• Entry Price: ₹{entry_price:.2f}\n")
+            self.result_box.insert(tk.END, f"• Entry Price: ₹{entry_price:.2f}\n", "neutral")
             self.result_box.insert(tk.END,
-                                   f"• Stop Loss: ₹{sl_price:.2f} ({((entry_price - sl_price) / entry_price * 100):.2f}% below entry)\n")
+                                   f"• Stop Loss: ₹{sl_price:.2f} ({((entry_price - sl_price) / entry_price * 100):.2f}% below entry)\n",
+                                   "negative" if (entry_price - sl_price) / entry_price * 100 > 5 else "warning")
             self.result_box.insert(tk.END,
-                                   f"• Target: ₹{target_price:.2f} ({((target_price - entry_price) / entry_price * 100):.2f}% above entry)\n")
-            self.result_box.insert(tk.END, f"• Risk per Share: ₹{risk_per_share:.2f}\n")
-            self.result_box.insert(tk.END, f"• Reward/Risk Ratio: {reward_risk_ratio:.2f}:1\n")
+                                   f"• Target: ₹{target_price:.2f} ({((target_price - entry_price) / entry_price * 100):.2f}% above entry)\n",
+                                   "positive" if (target_price - entry_price) / entry_price * 100 > 5 else "neutral")
+            self.result_box.insert(tk.END, f"• Risk per Share: ₹{risk_per_share:.2f}\n", "negative")
+            self.result_box.insert(tk.END, f"• Reward/Risk Ratio: {reward_risk_ratio:.2f}:1\n",
+                                   "positive" if reward_risk_ratio >= 2 else (
+                                       "warning" if reward_risk_ratio >= 1 else "negative"))
 
             if atr_value:
                 atr_ratio = risk_per_share / atr_value
-                self.result_box.insert(tk.END, f"• ATR Ratio (Risk/ATR): {atr_ratio:.2f}\n")
+                self.result_box.insert(tk.END, f"• ATR Ratio (Risk/ATR): {atr_ratio:.2f}\n",
+                                       "positive" if atr_ratio <= 1.5 else (
+                                           "warning" if atr_ratio <= 2 else "negative"))
 
             # Position sizing
             self.result_box.insert(tk.END, "\n📈 Position Sizing:\n", "subheader")
-            self.result_box.insert(tk.END, f"• Capital: ₹{capital:,.0f}\n")
-            self.result_box.insert(tk.END, f"• Risk % of Capital: {risk_percent:.2f}%")
+            self.result_box.insert(tk.END, f"• Capital: ₹{capital:,.0f}\n", "neutral")
+            self.result_box.insert(tk.END, f"• Risk % of Capital: {risk_percent:.2f}%",
+                                   "positive" if risk_percent <= 1 else "warning")
             if risk_adjustment_factor < 1.0:
                 self.result_box.insert(tk.END, f" (Adjusted for drawdown)", "warning")
             self.result_box.insert(tk.END, "\n")
 
-            self.result_box.insert(tk.END, f"• Capital Risk Limit: ₹{capital_risk_limit:,.2f}\n")
+            self.result_box.insert(tk.END, f"• Capital Risk Limit: ₹{capital_risk_limit:,.2f}\n",
+                                   "positive" if capital_risk_limit <= capital * 0.01 else "warning")
 
             if manual_override:
                 self.result_box.insert(tk.END, f"• Manual Position Size: {position_size:,} shares\n", "warning")
             else:
-                self.result_box.insert(tk.END, f"• Calculated Position Size: {position_size:,} shares\n")
+                self.result_box.insert(tk.END, f"• Calculated Position Size: {position_size:,} shares\n",
+                                       "positive" if position_size > 0 else "negative")
 
-            self.result_box.insert(tk.END, f"• Estimated Investment: ₹{estimated_investment:,.2f}\n")
-            self.result_box.insert(tk.END, f"• Exposure %: {exposure_pct:.2f}% of capital")
+            self.result_box.insert(tk.END, f"• Estimated Investment: ₹{estimated_investment:,.2f}\n", "neutral")
+            self.result_box.insert(tk.END, f"• Exposure %: {exposure_pct:.2f}% of capital",
+                                   "positive" if exposure_pct <= max_trade_exp_pct else "warning")
 
             if exposure_pct > max_trade_exp_pct:
-                self.result_box.insert(tk.END, " (OVER LIMIT)", "warning")
+                self.result_box.insert(tk.END, " (OVER LIMIT)", "negative")
             self.result_box.insert(tk.END, "\n")
 
             # Risk assessment
             self.result_box.insert(tk.END, "\n⚠️ Risk Assessment:\n", "subheader")
-            self.result_box.insert(tk.END, f"• Potential Profit: ₹{net_potential_profit:,.2f}\n")
-            self.result_box.insert(tk.END, f"• Potential Loss: ₹{net_potential_loss:,.2f}\n")
-            self.result_box.insert(tk.END, f"• Emotional Impact: {emotional_impact}\n")
-            self.result_box.insert(tk.END, f"• Consecutive Losses: {consecutive_losses}\n")
-            self.result_box.insert(tk.END, f"• Current Drawdown: {current_drawdown:.1f}%\n")
+            self.result_box.insert(tk.END, f"• Potential Profit: ₹{net_potential_profit:,.2f}\n", "positive")
+            self.result_box.insert(tk.END, f"• Potential Loss: ₹{net_potential_loss:,.2f}\n", "negative")
+            self.result_box.insert(tk.END, f"• Emotional Impact: {emotional_impact}\n", emotional_impact_color)
+            self.result_box.insert(tk.END, f"• Consecutive Losses: {consecutive_losses}\n",
+                                   "negative" if consecutive_losses >= 3 else "neutral")
+            self.result_box.insert(tk.END, f"• Current Drawdown: {current_drawdown:.1f}%\n",
+                                   "negative" if current_drawdown > 5 else (
+                                       "warning" if current_drawdown > 2 else "neutral"))
 
             # Trade management
             self.result_box.insert(tk.END, "\n🎯 Trade Management:\n", "subheader")
             trail_sl_price = round(entry_price + (risk_per_share * 1.5), 2)
             partial_booking_price = round(entry_price + ((target_price - entry_price) * 0.5), 2)
 
-            self.result_box.insert(tk.END, f"• Trail Stop Price (1.5R): ₹{trail_sl_price:.2f}\n")
-            self.result_box.insert(tk.END, f"• Partial Booking Price (50% target): ₹{partial_booking_price:.2f}\n")
+            self.result_box.insert(tk.END, f"• Trail Stop Price (1.5R): ₹{trail_sl_price:.2f}\n", "info")
+            self.result_box.insert(tk.END, f"• Partial Booking Price (50% target): ₹{partial_booking_price:.2f}\n",
+                                   "info")
 
             # Psychology tips based on emotional state
-            current_emotion = self.emotional_state.get()
-            self.result_box.insert(tk.END, f"\n🧠 Psychology Check ({current_emotion}):\n", "subheader")
+            current_emotion = self.emotional_state.get().lower()
+            emotion_color_tag = f"emotion_{current_emotion}"
 
-            if current_emotion in ["Anxious", "Fearful"]:
+            self.result_box.insert(tk.END, f"\n🧠 Psychology Check:\n", "subheader")
+            self.result_box.insert(tk.END, f"Current Emotional State: {self.emotional_state.get()}\n",
+                                   emotion_color_tag)
+
+            if current_emotion in ["anxious", "fearful"]:
                 self.result_box.insert(tk.END, "• Consider reducing position size by 50%\n", "warning")
-                self.result_box.insert(tk.END, "• Review trade rationale before proceeding\n")
-                self.result_box.insert(tk.END, "• Practice 4-7-8 breathing exercise\n")
-            elif current_emotion in ["Greedy", "Reckless"]:
+                self.result_box.insert(tk.END, "• Review trade rationale before proceeding\n", "neutral")
+                self.result_box.insert(tk.END, "• Practice 4-7-8 breathing exercise\n", "info")
+            elif current_emotion in ["greedy", "reckless"]:
                 self.result_box.insert(tk.END, "• Consider waiting 30 minutes before trading\n", "warning")
-                self.result_box.insert(tk.END, "• Review your trading plan\n")
-                self.result_box.insert(tk.END, "• Remember: Discipline > Opportunity\n")
+                self.result_box.insert(tk.END, "• Review your trading plan\n", "neutral")
+                self.result_box.insert(tk.END, "• Remember: Discipline > Opportunity\n", "highlight")
             else:
-                self.result_box.insert(tk.END, "• Emotional state appears balanced\n")
-                self.result_box.insert(tk.END, "• Still recommend reviewing trade plan\n")
+                self.result_box.insert(tk.END, "• Emotional state appears balanced\n", "positive")
+                self.result_box.insert(tk.END, "• Still recommend reviewing trade plan\n", "neutral")
+
+            # Add last trade time if available
+            if self.last_trade_time:
+                time_since_last = (datetime.now() - self.last_trade_time).total_seconds() / 60
+                self.result_box.insert(tk.END, f"\n⏱ Time Since Last Trade: {time_since_last:.1f} minutes\n",
+                                       "positive" if time_since_last > 30 else "warning")
+
+            self.result_box.config(state="disabled")
 
         except Exception as e:
             messagebox.showerror("Input Error", str(e))
+            self.result_box.config(state="normal")
             self.result_box.delete("1.0", tk.END)
+            self.result_box.config(state="disabled")
 
     def record_trade_outcome(self, is_win):
         # Update trade statistics
         self.total_trades += 1
+        self.last_trade_time = datetime.now()
 
         if is_win:
             self.winning_trades += 1
@@ -476,7 +584,8 @@ class SwingTradeCalculator:
 
         # Update drawdown calculation
         if not is_win and self.consecutive_losses > 1:
-            self.current_drawdown += 1  # Simplified for demo - would use actual P&L in real app
+            self.current_drawdown += 2  # Simplified for demo - would use actual P&L in real app
+            self.max_drawdown = max(self.max_drawdown, self.current_drawdown)
             self.inputs["Current Drawdown %"].set(f"{self.current_drawdown:.1f}")
 
         # Update stats display
@@ -496,6 +605,7 @@ class SwingTradeCalculator:
             self.max_drawdown = 0
             self.current_drawdown = 0
             self.equity_curve = []
+            self.last_trade_time = None
 
             self.inputs["Consecutive Losses"].set("0")
             self.inputs["Current Drawdown %"].set("0")
@@ -510,105 +620,83 @@ class SwingTradeCalculator:
         avg_loss = 1.0  # Placeholder
         expectancy = (win_rate / 100 * avg_win) - ((100 - win_rate) / 100 * avg_loss) if self.total_trades > 0 else 0
 
-        # Update stats display
+        # Update stats display with enhanced coloring
         self.stats_text.config(state="normal")
         self.stats_text.delete("1.0", tk.END)
 
         self.stats_text.insert(tk.END, "📊 Trading Performance Statistics\n\n", "header")
-        self.stats_text.insert(tk.END, f"• Total Trades: {self.total_trades}\n")
-        self.stats_text.insert(tk.END, f"• Winning Trades: {self.winning_trades}\n")
-        self.stats_text.insert(tk.END, f"• Losing Trades: {self.losing_trades}\n")
-        self.stats_text.insert(tk.END, f"• Win Rate: {win_rate:.1f}%\n")
-        self.stats_text.insert(tk.END, f"• Consecutive Losses: {self.consecutive_losses}\n")
-        self.stats_text.insert(tk.END, f"• Current Drawdown: {self.current_drawdown:.1f}%\n")
-        self.stats_text.insert(tk.END, f"• Max Drawdown: {self.max_drawdown:.1f}%\n")
-        self.stats_text.insert(tk.END, f"• Expectancy: {expectancy:.2f}R per trade\n\n")
-
-        # Add performance feedback
-        self.stats_text.insert(tk.END, "📈 Performance Feedback:\n", "subheader")
-
-        if self.total_trades == 0:
-            self.stats_text.insert(tk.END, "No trades recorded yet. Start trading to see statistics.\n")
-        else:
-            if win_rate > 60:
-                self.stats_text.insert(tk.END, "• Excellent win rate! Maintain discipline.\n", "success")
-            elif win_rate < 40:
-                self.stats_text.insert(tk.END, "• Low win rate. Review your strategy.\n", "warning")
-            else:
-                self.stats_text.insert(tk.END, "• Average win rate. Focus on risk management.\n")
-
-            if self.consecutive_losses >= 3:
-                self.stats_text.insert(tk.END,
-                                       f"• {self.consecutive_losses} consecutive losses. Consider reducing position size.\n",
-                                       "warning")
-
-            if expectancy > 0.5:
-                self.stats_text.insert(tk.END, "• Positive expectancy. Keep following your edge.\n", "success")
-            elif expectancy < 0:
-                self.stats_text.insert(tk.END, "• Negative expectancy. Need strategy adjustment.\n", "warning")
-            else:
-                self.stats_text.insert(tk.END, "• Neutral expectancy. Room for improvement.\n")
+        self.stats_text.insert(tk.END, f"• Total Trades: {self.total_trades}\n", "neutral")
+        self.stats_text.insert(tk.END, f"• Winning Trades: {self.winning_trades}\n",
+                               "positive" if self.winning_trades > self.losing_trades else "neutral")
+        self.stats_text.insert(tk.END, f"• Losing Trades: {self.losing_trades}\n",
+                               "negative" if self.losing_trades > self.winning_trades else "neutral")
+        self.stats_text.insert(tk.END, f"• Win Rate: {win_rate:.1f}%\n",
+                               "positive" if win_rate > 60 else ("negative" if win_rate < 40 else "neutral"))
+        self.stats_text.insert(tk.END, f"• Consecutive Losses: {self.consecutive_losses}\n",
+                               "negative" if self.consecutive_losses >= 3 else "neutral")
+        self.stats_text.insert(tk.END, f"• Current Drawdown: {self.current_drawdown:.1f}%\n",
+                               "negative" if self.current_drawdown > 5 else (
+                                   "warning" if self.current_drawdown > 2 else "neutral"))
+        self.stats_text.insert(tk.END, f"• Max Drawdown: {self.max_drawdown:.1f}%\n",
+                               "negative" if self.max_drawdown > 5 else (
+                                   "warning" if self.max_drawdown > 2 else "neutral"))
+        self.stats_text.insert(tk.END, f"• Expectancy (Est.): {expectancy:.2f}R\n",
+                               "positive" if expectancy > 0 else ("negative" if expectancy < 0 else "neutral"))
 
         self.stats_text.config(state="disabled")
 
     def save_journal_entry(self):
-        # Save trade journal entry
+        # Collect journal entry data
         notes = self.trade_notes.get("1.0", tk.END).strip()
         lessons = self.lessons_learned.get("1.0", tk.END).strip()
         emotion = self.trade_emotion.get()
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if not notes or not emotion:
-            messagebox.showwarning("Incomplete Entry", "Please provide both notes and emotional state")
+        if not notes and not lessons:
+            messagebox.showwarning("Incomplete Entry", "Please enter trade notes or lessons learned.")
             return
 
-        entry = f"=== Journal Entry ===\n"
-        entry += f"Emotion: {emotion}\n"
-        entry += f"Notes: {notes}\n"
-        entry += f"Lessons: {lessons}\n\n"
+        entry = f"🕒 {timestamp}\n🧠 Emotion: {emotion}\n📝 Notes: {notes}\n📚 Lessons: {lessons}\n{'-' * 70}\n"
 
-        # Add to journal display
         self.journal_display.config(state="normal")
         self.journal_display.insert("1.0", entry)
         self.journal_display.config(state="disabled")
 
-        # Clear fields
         self.trade_notes.delete("1.0", tk.END)
         self.lessons_learned.delete("1.0", tk.END)
         self.trade_emotion.set("")
 
-        messagebox.showinfo("Saved", "Journal entry saved successfully!")
+        messagebox.showinfo("Journal Saved", "Your journal entry has been saved successfully.")
 
     def start_meditation_timer(self):
-        # Placeholder for meditation timer functionality
-        messagebox.showinfo("Meditation Timer", "Starting 5-minute meditation timer...\n\n"
-                                                "Close your eyes and focus on your breathing.")
+        messagebox.showinfo("Meditation Timer",
+                            "Begin 5-minute meditation.\n\nClose this box to start.\nUse a timer or deep breathing app.")
+        # A real timer or sound alert could be integrated in future versions.
 
-    def get_float(self, var_name, mandatory=False, default=None):
-        val = self.inputs[var_name].get().strip()
-        if not val:
-            if mandatory:
-                raise ValueError(f"{var_name} is required.")
-            else:
-                return default
+    def get_float(self, label, mandatory=True, default=None):
+        value = self.inputs[label].get().strip()
+        if not value and mandatory and default is None:
+            raise ValueError(f"{label} is required.")
+        if not value and default is not None:
+            return default
         try:
-            return float(val)
+            return float(value)
         except ValueError:
-            raise ValueError(f"Invalid number for {var_name}: '{val}'")
+            raise ValueError(f"{label} must be a number.")
 
-    def get_int(self, var_name, mandatory=False, default=None):
-        val = self.inputs[var_name].get().strip()
-        if not val:
-            if mandatory:
-                raise ValueError(f"{var_name} is required.")
-            else:
-                return default
+    def get_int(self, label, mandatory=True, default=None):
+        value = self.inputs[label].get().strip()
+        if not value and mandatory and default is None:
+            raise ValueError(f"{label} is required.")
+        if not value and default is not None:
+            return default
         try:
-            return int(val)
+            return int(value)
         except ValueError:
-            raise ValueError(f"Invalid integer for {var_name}: '{val}'")
+            raise ValueError(f"{label} must be an integer.")
 
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = SwingTradeCalculator(root)
-    root.mainloop()
+    # At the end of file, OUTSIDE the class
+    if __name__ == "__main__":
+        root = tk.Tk()
+        app = SwingTradeCalculator(root)
+        root.mainloop()
