@@ -34,7 +34,7 @@ def analyze_volatility(stock, historical_folder='historical'):
     try:
         df = df.rename(columns={
             'open': 'Open', 'high': 'High', 'low': 'Low',
-            'close': 'Close', 'prev close': 'Prev Close',
+            'close': 'Close', 'previous close': 'Prev Close',
             'date': 'Date', 'volume': 'Volume'
         })
 
@@ -59,6 +59,8 @@ def analyze_volatility(stock, historical_folder='historical'):
         print("Volume Sentiment:", "📈 Spike" if volume_spike else "📉 Normal")
     except Exception as e:
         print(f"❌ Error processing {stock}: {e}")
+
+        print("Available columns:", df.columns.tolist())
 
 
 # === Main ===
