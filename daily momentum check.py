@@ -33,13 +33,13 @@ if os.path.exists(historical_file):
         if len(stock_data) < 30:
             continue
 
-        stock_data['EMA_8'] = ta.ema(stock_data['CLOSE'], length=8)
-        stock_data['EMA_21'] = ta.ema(stock_data['CLOSE'], length=21)
+        stock_data['EMA_10'] = ta.ema(stock_data['CLOSE'], length=10)
+        stock_data['EMA_20'] = ta.ema(stock_data['CLOSE'], length=20)
 
-        if stock_data['EMA_8'].iloc[-1] > stock_data['EMA_21'].iloc[-1]:
+        if stock_data['EMA_20'].iloc[-1] > stock_data['EMA_20'].iloc[-1]:
             bullish_ema_stocks.append(symbol)
 
-    print("\n📈 EMA Bullish Candidates (8 EMA > 21 EMA):")
+    print("\n📈 EMA Bullish Candidates (10 EMA > 21 EMA):")
     print(bullish_ema_stocks)
 else:
     print("\n⚠️ Historical file not found. Skipping EMA-based screening.")
