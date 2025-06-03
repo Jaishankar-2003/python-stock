@@ -94,5 +94,5 @@ def analyze_volatility_from_csv(file_path):
     print(f"Volume Sentiment: {volume_sentiment}")
 
 if __name__ == "__main__":
-    file_path = "suzlon.csv"
+    file_path = "files/suzlon.csv"
     analyze_volatility_from_csv(file_path)
