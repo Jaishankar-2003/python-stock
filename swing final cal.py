@@ -299,3 +299,4 @@ tk.Button(btn_frame, text="Clear", font=font_label, bg="#f44336", fg="white", co
 tk.Button(btn_frame, text="Export History", font=font_label, bg="#2196F3", fg="white", command=on_export).pack(side="left", expand=True, fill="x", padx=5)
 
 root.mainloop()
+#
