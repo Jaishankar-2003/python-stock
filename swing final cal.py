@@ -101,7 +101,14 @@ def enhanced_trade_calculator(
 # --- GUI ---
 root = tk.Tk()
 root.title("📈 Enhanced Swing Trade Calculator")
-root.state("zoomed")
+
+import platform
+if platform.system() == "Windows":
+    root.state("zoomed")
+else:
+    root.attributes('-zoomed', True)
+
+root.geometry(f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}")
 
 # Fonts
 font_label = tkfont.Font(family="Arial", size=14)
