@@ -428,12 +428,23 @@ class SwingTradeCalculator:
             capital_risk_limit = capital * (risk_percent / 100)
 
             # Position size calculation
-            if manual_position_size is not None and manual_position_size > 0:
-                position_size = manual_position_size
-                manual_override = True
-            else:
-                position_size = floor(capital_risk_limit / risk_per_share)
-                manual_override = False
+            # if manual_position_size is not None and manual_position_size > 0:
+            #     position_size = manual_position_size
+            #     manual_override = True
+            # else:
+            #     position_size = floor(capital_risk_limit / risk_per_share)
+            #     manual_override = False
+
+            position_size, manual_override, violated = self.calculate_position_size(
+                entry_price,
+                sl_price,
+                capital,
+                risk_percent,
+                manual_position_size
+            )
+
+            actual_loss = abs((sl_price - entry_price) * position_size)
+            actual_risk_pct = (actual_loss / capital) * 100
 
             estimated_investment = position_size * entry_price
             exposure_pct = (estimated_investment / capital) * 100
@@ -702,6 +713,47 @@ class SwingTradeCalculator:
             return int(value)
         except ValueError:
             raise ValueError(f"{label} must be an integer.")
+
+    def calculate_position_size(self, entry, stop, capital, risk_pct, manual_size):
+        risk_per_share = entry - stop
+        if risk_per_share <= 0:
+            raise ValueError("Invalid Stop Loss. Must be below entry.")
+
+        max_rupees = capital * (risk_pct / 100)
+        max_size = floor(max_rupees / risk_per_share)
+
+        if max_size <= 0:
+            raise ValueError("Risk too small for even 1 share.")
+
+        if manual_size:
+            if manual_size > max_size:
+                return max_size, True, True  # reduced, manual used, violated
+            return manual_size, True, False
+
+        return max_size, False, False
+
+    self.result_box.insert(tk.END, f"\n🧮 Risk Engine:\n", "subheader")
+    self.result_box.insert(tk.END, f"• Allowed Risk: ₹{capital_risk_limit:.2f}\n", "neutral")
+    self.result_box.insert(
+        tk.END,
+        f"• Actual Risk: ₹{actual_loss:.2f}\n",
+        "negative" if actual_loss > capital_risk_limit else "positive"
+    )
+    self.result_box.insert(
+        tk.END,
+        f"• Actual Risk %: {actual_risk_pct:.2f}%\n",
+        "negative" if actual_risk_pct > risk_percent else "positive"
+    )
+
+    if violated:
+        messagebox.showwarning(
+            "Risk Violation Prevented",
+            "Manual position exceeded risk rules.\n"
+            "System auto-reduced to safe size."
+        )
+
+    if violated:
+        self.result_box.insert(tk.END, "• RULE VIOLATION PREVENTED BY SYSTEM\n", "negative")
 
     # At the end of file, OUTSIDE the class
 if __name__ == "__main__":
