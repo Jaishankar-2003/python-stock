@@ -267,28 +267,33 @@ def extract_string(text, pattern):
 
 def extract_data_from_text(text):
     return {
-        "price": extract_float(text, r"Close\s*\*\s*([\d.]+)"),
-        "vwap": extract_float(text, r"VWAP\s*([\d.]+)"),
-        "upper": extract_float(text, r"Upper Band\s*([\d.]+)"),
-        "lower": extract_float(text, r"Lower Band\s*([\d.]+)"),
-        "week_return": extract_percent(text, r"1W\s*(-?[\d.]+)%"),
+        "price": extract_float(text, r"Close\s*\*\s*([\d,]+\.?\d*)"),
+        "vwap": extract_float(text, r"VWAP\s*([\d,]+\.?\d*)"),
+        "upper": extract_float(text, r"Upper Band\s*([\d,]+\.?\d*)"),
+        "lower": extract_float(text, r"Lower Band\s*([\d,]+\.?\d*)"),
+        "week_return": extract_percent(text, r"\b1W\s*(-?[\d.]+)\s*%"),
 
+        # already strict (kept same style)
         "volume": extract_float(text, r"Traded Volume.*?([\d,]+\.?\d*)"),
         "value": extract_float(text, r"Traded Value.*?([\d,]+\.?\d*)"),
         "cap": extract_float(text, r"Total Market Cap.*?([\d,]+\.?\d*)"),
         "float_cap": extract_float(text, r"Free Float Market Cap.*?([\d,]+\.?\d*)"),
 
+        "impact": extract_float(text, r"Impact cost\s*([\d,]+\.?\d*)"),
+        "delivery": extract_percent(text, r"Deliverable\s*/\s*Traded\s+Quantity\s+([\d.]+)\s*%"),
+        "margin": extract_float(text, r"Applicable Margin Rate\s*([\d,]+\.?\d*)"),
 
-        "impact": extract_float(text, r"Impact cost\s*([\d.]+)"),
-        "delivery": extract_percent(text, r"Deliverable / Traded\s+Quantity\s+([\d.]+)\s*%"),
-        "margin": extract_float(text, r"Applicable Margin Rate\s*([\d.]+)"),
-        "daily_vol": extract_float(text, r"Daily Volatility\s*([\d.]+)"),
-        "annual_vol": extract_float(text, r"Annualised Volatility\s*([\d.]+)"),
-        "pe": extract_float(text, r"Adjusted P/E\s*([\d.]+)"),
-        "low52": extract_float(text, r"52 Week Low.*?([\d.]+)"),
-        "high52": extract_float(text, r"52 Week High.*?([\d.]+)"),
-        "index": extract_string(text, r"Index\s+(.*?)\n")
+        "daily_vol": extract_float(text, r"Daily Volatility\s*([\d,]+\.?\d*)"),
+        "annual_vol": extract_float(text, r"Annualised Volatility\s*([\d,]+\.?\d*)"),
+
+        "pe": extract_float(text, r"Adjusted P/E\s*([\d,]+\.?\d*)"),
+
+        "low52": extract_float(text, r"52 Week Low.*?([\d,]+\.?\d*)"),
+        "high52": extract_float(text, r"52 Week High.*?([\d,]+\.?\d*)"),
+
+        "index": extract_string(text, r"Index\s+([A-Z0-9\s\-]+)")
     }
+
 
 def populate_fields():
     data = extract_data_from_text(input_box.get("1.0", tk.END))

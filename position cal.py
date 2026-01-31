@@ -434,21 +434,42 @@ class SwingTradeCalculator:
                 risk_percent,
                 manual_position_size
             )
+            #
+            # actual_loss = abs((sl_price - entry_price) * position_size)
+            # actual_risk_pct = (actual_loss / capital) * 100
+            #
+            # estimated_investment = position_size * entry_price
+            # exposure_pct = (estimated_investment / capital) * 100
+            #
+            # # Further reduce position if exceeding max exposure
+            # if exposure_pct > max_trade_exp_pct:
+            #     max_allowed_size = floor((capital * max_trade_exp_pct / 100) / entry_price)
+            #     position_size = min(position_size, max_allowed_size)
+            #     estimated_investment = position_size * entry_price
+            #     exposure_pct = (estimated_investment / capital) * 100
+            #     messagebox.showwarning("Exposure Limit",
+            #                            f"Position reduced to {position_size} shares to stay within {max_trade_exp_pct}% exposure")
 
-            actual_loss = abs((sl_price - entry_price) * position_size)
-            actual_risk_pct = (actual_loss / capital) * 100
-
+            # initial investment and exposure from risk-based size
             estimated_investment = position_size * entry_price
             exposure_pct = (estimated_investment / capital) * 100
 
-            # Further reduce position if exceeding max exposure
+            # reduce position if exceeding max trade exposure
             if exposure_pct > max_trade_exp_pct:
                 max_allowed_size = floor((capital * max_trade_exp_pct / 100) / entry_price)
                 position_size = min(position_size, max_allowed_size)
-                estimated_investment = position_size * entry_price
-                exposure_pct = (estimated_investment / capital) * 100
-                messagebox.showwarning("Exposure Limit",
-                                       f"Position reduced to {position_size} shares to stay within {max_trade_exp_pct}% exposure")
+                messagebox.showwarning(
+                    "Exposure Limit",
+                    f"Position reduced to {position_size} shares to stay within {max_trade_exp_pct}% exposure"
+                )
+
+            # recalculate investment and exposure AFTER final position size is known
+            estimated_investment = position_size * entry_price
+            exposure_pct = (estimated_investment / capital) * 100
+
+            # NOW calculate real risk using final position size
+            actual_loss = abs((entry_price - sl_price) * position_size)
+            actual_risk_pct = (actual_loss / capital) * 100
 
             # Calculate potential outcomes
             net_potential_profit = (target_price - entry_price) * position_size
