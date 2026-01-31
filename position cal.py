@@ -354,7 +354,7 @@ class SwingTradeCalculator:
             ("Market Wizards - Jack Schwager", "#3498db",
              "https://www.amazon.com/Market-Wizards-Updated-Interviews-Traders/dp/1118273052"),
             ("Mind Over Markets - James Dalton", "#3498db",
-             "https://www.amazon.com/Mind-Over-Markets-Updated-Auction/dp/1118809238")
+             "https://www.amazon.com/Mind-Over-Markets-Updated-Auction/dp/1118809238"),
         ]
 
         for text, color, url in resources:
@@ -426,14 +426,6 @@ class SwingTradeCalculator:
 
             # Capital risk limit
             capital_risk_limit = capital * (risk_percent / 100)
-
-            # Position size calculation
-            # if manual_position_size is not None and manual_position_size > 0:
-            #     position_size = manual_position_size
-            #     manual_override = True
-            # else:
-            #     position_size = floor(capital_risk_limit / risk_per_share)
-            #     manual_override = False
 
             position_size, manual_override, violated = self.calculate_position_size(
                 entry_price,
@@ -571,6 +563,28 @@ class SwingTradeCalculator:
                 time_since_last = (datetime.now() - self.last_trade_time).total_seconds() / 60
                 self.result_box.insert(tk.END, f"\n⏱ Time Since Last Trade: {time_since_last:.1f} minutes\n",
                                        "positive" if time_since_last > 30 else "warning")
+
+            # Risk Engine display (moved inside calculate where variables are in scope)
+            self.result_box.insert(tk.END, f"\n🧮 Risk Engine:\n", "subheader")
+            self.result_box.insert(tk.END, f"• Allowed Risk: ₹{capital_risk_limit:,.2f}\n", "neutral")
+            self.result_box.insert(
+                tk.END,
+                f"• Actual Risk: ₹{actual_loss:,.2f}\n",
+                "negative" if actual_loss > capital_risk_limit else "positive"
+            )
+            self.result_box.insert(
+                tk.END,
+                f"• Actual Risk %: {actual_risk_pct:.2f}%\n",
+                "negative" if actual_risk_pct > risk_percent else "positive"
+            )
+
+            if violated:
+                messagebox.showwarning(
+                    "Risk Violation Prevented",
+                    "Manual position exceeded risk rules.\n"
+                    "System auto-reduced to safe size."
+                )
+                self.result_box.insert(tk.END, "• RULE VIOLATION PREVENTED BY SYSTEM\n", "negative")
 
             self.result_box.config(state="disabled")
 
@@ -732,30 +746,6 @@ class SwingTradeCalculator:
 
         return max_size, False, False
 
-    self.result_box.insert(tk.END, f"\n🧮 Risk Engine:\n", "subheader")
-    self.result_box.insert(tk.END, f"• Allowed Risk: ₹{capital_risk_limit:.2f}\n", "neutral")
-    self.result_box.insert(
-        tk.END,
-        f"• Actual Risk: ₹{actual_loss:.2f}\n",
-        "negative" if actual_loss > capital_risk_limit else "positive"
-    )
-    self.result_box.insert(
-        tk.END,
-        f"• Actual Risk %: {actual_risk_pct:.2f}%\n",
-        "negative" if actual_risk_pct > risk_percent else "positive"
-    )
-
-    if violated:
-        messagebox.showwarning(
-            "Risk Violation Prevented",
-            "Manual position exceeded risk rules.\n"
-            "System auto-reduced to safe size."
-        )
-
-    if violated:
-        self.result_box.insert(tk.END, "• RULE VIOLATION PREVENTED BY SYSTEM\n", "negative")
-
-    # At the end of file, OUTSIDE the class
 if __name__ == "__main__":
     root = tk.Tk()
     app = SwingTradeCalculator(root)
