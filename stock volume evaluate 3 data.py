@@ -383,11 +383,84 @@ def evaluate_stock():
     except:
         messagebox.showerror("Error", "Invalid numeric values")
 
+# # ----------------- GUI -----------------
+#
+# root = tk.Tk()
+# root.title("Professional Swing Trade Evaluator")
+#
+# fields = [
+#     ("Current Price", "price"),
+#     ("VWAP", "vwap"),
+#     ("Upper Band", "upper"),
+#     ("Lower Band", "lower"),
+#     ("1W Return %", "week_return"),
+#
+#     ("Traded Volume (Lakhs)", "volume"),
+#     ("Traded Value (₹ Cr)", "value"),
+#     ("Market Cap (₹ Cr)", "cap"),
+#     ("Free Float Cap (₹ Cr)", "float_cap"),
+#     ("Impact Cost", "impact"),
+#     ("Delivery %", "delivery"),
+#     ("Margin", "margin"),
+#     ("Daily Volatility", "daily_vol"),
+#     ("Annual Volatility", "annual_vol"),
+#     ("P/E Ratio", "pe"),
+#     ("52W Low", "low52"),
+#     ("52W High", "high52"),
+#     ("Index", "index")
+# ]
+#
+# entries = {}
+# for i, (label, key) in enumerate(fields):
+#     tk.Label(root, text=label).grid(row=i, column=0, sticky="e")
+#     e = tk.Entry(root)
+#     e.grid(row=i, column=1)
+#     entries[key] = e
+#
+# tk.Button(root, text="📥 Auto-Fill From Raw Data", command=populate_fields).grid(row=len(fields), column=0, columnspan=2)
+# tk.Button(root, text="Evaluate", command=evaluate_stock).grid(row=len(fields)+1, column=0, columnspan=2)
+#
+# label_result = tk.Label(root, text="", font=("Arial", 14, "bold"))
+# label_result.grid(row=len(fields)+2, column=0, columnspan=2)
+#
+# label_tags = tk.Label(root, text="", justify="left")
+# label_tags.grid(row=len(fields)+3, column=0, columnspan=2)
+#
+# tk.Label(root, text="Paste NSE Raw Data:").grid(row=len(fields)+4, column=0, columnspan=2)
+# input_box = tk.Text(root, height=10, width=60)
+# input_box.grid(row=len(fields)+5, column=0, columnspan=2)
+#
+# root.mainloop()
+
+# gui  2
+
+
 # ----------------- GUI -----------------
 
 root = tk.Tk()
 root.title("Professional Swing Trade Evaluator")
 
+# Set good default size for 1366x768 screens
+root.geometry("1200x700")
+root.minsize(1000, 600)
+
+# Make root expandable
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+
+# -------- Left Panel (Inputs + Results) --------
+left_frame = tk.Frame(root, padx=10, pady=10)
+left_frame.grid(row=0, column=0, sticky="nsew")
+
+# -------- Right Panel (Raw Data Paste Box) --------
+right_frame = tk.Frame(root, padx=10, pady=10)
+right_frame.grid(row=0, column=1, sticky="nsew")
+
+root.grid_columnconfigure(0, weight=3)
+root.grid_columnconfigure(1, weight=2)
+
+# Fields (we will show them in 3 columns)
 fields = [
     ("Current Price", "price"),
     ("VWAP", "vwap"),
@@ -400,35 +473,70 @@ fields = [
     ("Market Cap (₹ Cr)", "cap"),
     ("Free Float Cap (₹ Cr)", "float_cap"),
     ("Impact Cost", "impact"),
+
     ("Delivery %", "delivery"),
     ("Margin", "margin"),
     ("Daily Volatility", "daily_vol"),
     ("Annual Volatility", "annual_vol"),
     ("P/E Ratio", "pe"),
+
     ("52W Low", "low52"),
     ("52W High", "high52"),
-    ("Index", "index")
+    ("Index", "index"),
 ]
 
 entries = {}
+
+# 3 columns layout
+cols = 3
 for i, (label, key) in enumerate(fields):
-    tk.Label(root, text=label).grid(row=i, column=0, sticky="e")
-    e = tk.Entry(root)
-    e.grid(row=i, column=1)
+    r = i // cols
+    c = (i % cols) * 2
+
+    tk.Label(left_frame, text=label, font=("Segoe UI", 10, "bold"))\
+        .grid(row=r, column=c, sticky="e", padx=5, pady=5)
+
+    e = tk.Entry(left_frame, font=("Segoe UI", 10), width=18)
+    e.grid(row=r, column=c+1, sticky="w", padx=5, pady=5)
     entries[key] = e
 
-tk.Button(root, text="📥 Auto-Fill From Raw Data", command=populate_fields).grid(row=len(fields), column=0, columnspan=2)
-tk.Button(root, text="Evaluate", command=evaluate_stock).grid(row=len(fields)+1, column=0, columnspan=2)
+# Make columns stretch nicely
+for i in range(cols * 2):
+    left_frame.grid_columnconfigure(i, weight=1)
 
-label_result = tk.Label(root, text="", font=("Arial", 14, "bold"))
-label_result.grid(row=len(fields)+2, column=0, columnspan=2)
+# -------- Buttons --------
+btn_frame = tk.Frame(left_frame, pady=10)
+btn_frame.grid(row=(len(fields)//cols)+1, column=0, columnspan=cols*2, sticky="ew")
 
-label_tags = tk.Label(root, text="", justify="left")
-label_tags.grid(row=len(fields)+3, column=0, columnspan=2)
+tk.Button(btn_frame, text="📥 Auto-Fill From Raw Data",
+          font=("Segoe UI", 11, "bold"),
+          bg="#4CAF50", fg="white",
+          command=populate_fields).pack(side="left", expand=True, fill="x", padx=5)
 
-tk.Label(root, text="Paste NSE Raw Data:").grid(row=len(fields)+4, column=0, columnspan=2)
-input_box = tk.Text(root, height=10, width=60)
-input_box.grid(row=len(fields)+5, column=0, columnspan=2)
+tk.Button(btn_frame, text="Evaluate",
+          font=("Segoe UI", 11, "bold"),
+          bg="#2196F3", fg="white",
+          command=evaluate_stock).pack(side="left", expand=True, fill="x", padx=5)
+
+# -------- Result Area --------
+label_result = tk.Label(left_frame, text="",
+                        font=("Segoe UI", 16, "bold"))
+label_result.grid(row=(len(fields)//cols)+2,
+                  column=0, columnspan=cols*2, pady=10)
+
+label_tags = tk.Label(left_frame, text="",
+                      font=("Segoe UI", 10),
+                      justify="left", anchor="w")
+label_tags.grid(row=(len(fields)//cols)+3,
+                column=0, columnspan=cols*2, sticky="w")
+
+# -------- Right Panel: Raw NSE Data --------
+tk.Label(right_frame, text="Paste NSE Raw Data:",
+         font=("Segoe UI", 12, "bold")).pack(anchor="w")
+
+input_box = tk.Text(right_frame,
+                    font=("Consolas", 10),
+                    wrap="word")
+input_box.pack(expand=True, fill="both", pady=5)
 
 root.mainloop()
-
