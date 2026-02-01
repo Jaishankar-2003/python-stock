@@ -47,22 +47,37 @@ def load_csv(csv_file):
 def ema(series, span):
     return series.ewm(span=span, adjust=False).mean()
 
+# def rsi(series, period=RSI_PERIOD):
+#     delta = series.diff()
+#
+#     gain = np.where(delta > 0, delta, 0.0)
+#     loss = np.where(delta < 0, -delta, 0.0)
+#
+#     gain_ema = pd.Series(gain, index=series.index).ewm(
+#         alpha=1 / period, adjust=False
+#     ).mean()
+#
+#     loss_ema = pd.Series(loss, index=series.index).ewm(
+#         alpha=1 / period, adjust=False
+#     ).mean()
+#
+#     rs = gain_ema / loss_ema
+#     return 100 - (100 / (1 + rs))
+
 def rsi(series, period=RSI_PERIOD):
     delta = series.diff()
 
-    gain = np.where(delta > 0, delta, 0.0)
-    loss = np.where(delta < 0, -delta, 0.0)
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
 
-    gain_ema = pd.Series(gain, index=series.index).ewm(
-        alpha=1 / period, adjust=False
-    ).mean()
+    gain_ema = gain.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    loss_ema = loss.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
 
-    loss_ema = pd.Series(loss, index=series.index).ewm(
-        alpha=1 / period, adjust=False
-    ).mean()
+    # Prevent division by zero
+    rs = gain_ema / loss_ema.replace(0, np.nan)
 
-    rs = gain_ema / loss_ema
-    return 100 - (100 / (1 + rs))
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
 
 def add_indicators(df):
     df = df.copy()
@@ -91,6 +106,12 @@ def technical_signal(df, lookback=LOOKBACK):
     df = add_indicators(df)
 
     last = df.iloc[-1]
+
+    # 🚨 RSI warm-up check (ADD HERE)
+    if pd.isna(last["RSI"]):
+        return "NO TRADE"
+
+
     prev_high = df["HIGH"].iloc[-lookback-1:-1].max()
 
     breakout, near_breakout, vol_ok, trend_ok, rsi_ok = evaluate_conditions(
@@ -112,6 +133,13 @@ def debug_conditions(df, lookback=LOOKBACK):
     df = add_indicators(df)
 
     last = df.iloc[-1]
+
+    # 🚨 RSI warm-up check (ADD HERE)
+    if pd.isna(last["RSI"]):
+        print("\n🔍 CONDITION CHECK (LAST CANDLE)")
+        print("RSI not ready – insufficient data")
+        return
+
     prev_high = df["HIGH"].iloc[-lookback-1:-1].max()
 
     breakout, _, vol_ok, trend_ok, rsi_ok = evaluate_conditions(
@@ -163,6 +191,11 @@ def backtest_strategy(df, lookback=LOOKBACK,
 
     for i in range(lookback + 1, len(df) - 1):
         row = df.iloc[i]
+
+        # 🚨 RSI warm-up skip (ADD HERE)
+        if pd.isna(row["RSI"]):
+            continue
+
         prev_high = df["HIGH"].iloc[i-lookback:i].max()
 
         breakout, _, vol_ok, trend_ok, rsi_ok = evaluate_conditions(
@@ -198,7 +231,7 @@ def backtest_strategy(df, lookback=LOOKBACK,
 # =========================================================
 
 if __name__ == "__main__":
-    csv_path = "csv file/Quote-Equity-RADICO-EQ-01-01-2026-01-02-2026.csv"
+    csv_path = "csv file/Quote-Equity-MAZDOCK-EQ-25-01-2026-01-02-2026.csv"
 
     df = load_csv(csv_path)
 

@@ -80,4 +80,4 @@ def run_screener(file):
               f"{r['pullback']:12.2f}")
 
 # run on your big NSE file
-run_screener("csv file/FMCG-31-Jan-2026.csv")
+run_screener("csv file/MW-NIFTY-MIDCAP-100-01-Feb-2026.csv")
