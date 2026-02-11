@@ -200,5 +200,5 @@ def run_screener_multiple_files(folder_pattern="csv file/*.csv", top_n=20):
 # RUN
 # =========================================================
 
-run_screener_multiple_files("csv file/*.csv", top_n=200)
+run_screener_multiple_files("csv file/*.csv", top_n=500)
 
