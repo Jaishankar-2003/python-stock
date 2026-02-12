@@ -477,6 +477,306 @@
 #
 #======================================================================================================================================================================
 
+# import pandas as pd
+# import numpy as np
+# import glob
+#
+# # =========================================================
+# # CONFIG
+# # =========================================================
+#
+# LOOKBACK = 20
+# RSI_PERIOD = 14
+#
+# TARGET_PCT = 0.05
+# STOP_PCT = 0.02
+#
+# STRICTNESS = 0.90
+#
+# REQUIRED_COLUMNS = {"OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"}
+#
+#
+# # =========================================================
+# # DATA CLEANING
+# # =========================================================
+#
+# def clean_numeric_columns(df):
+#     numeric_cols = ["OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]
+#
+#     for col in numeric_cols:
+#         if col in df.columns:
+#             df[col] = (
+#                 df[col]
+#                 .astype(str)
+#                 .str.replace(",", "", regex=False)
+#                 .str.replace("₹", "", regex=False)
+#                 .str.strip()
+#             )
+#             df[col] = pd.to_numeric(df[col], errors="coerce")
+#
+#     return df
+#
+#
+# def detect_date_column(df):
+#     possible = ["DATE", "Date", "TIMESTAMP", "Timestamp", "date", "timestamp"]
+#     for c in possible:
+#         if c in df.columns:
+#             return c
+#     return None
+#
+#
+# def load_csv(csv_file):
+#     df = pd.read_csv(csv_file)
+#     df.columns = [c.strip() for c in df.columns]
+#
+#     date_col = detect_date_column(df)
+#
+#     if date_col:
+#         df[date_col] = pd.to_datetime(df[date_col], errors="coerce", dayfirst=True)
+#         df = df.dropna(subset=[date_col])
+#         df = df.sort_values(date_col).reset_index(drop=True)
+#     else:
+#         print("⚠️ WARNING: No DATE column found. Indicators may be wrong if CSV is reversed.")
+#
+#     df = clean_numeric_columns(df)
+#
+#     missing = REQUIRED_COLUMNS - set(df.columns)
+#     if missing:
+#         raise ValueError(f"Missing required columns: {missing}")
+#
+#     df = df.dropna(subset=["CLOSE", "HIGH", "LOW", "OPEN", "VOLUME"]).reset_index(drop=True)
+#
+#     return df
+#
+#
+# # =========================================================
+# # INDICATORS
+# # =========================================================
+#
+# def ema(series, span):
+#     return series.ewm(span=span, adjust=False).mean()
+#
+#
+# def rsi_wilder(series, period=RSI_PERIOD):
+#     delta = series.diff()
+#     gain = delta.clip(lower=0)
+#     loss = -delta.clip(upper=0)
+#
+#     avg_gain = gain.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+#     avg_loss = loss.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+#
+#     rs = avg_gain / avg_loss
+#     rsi = 100 - (100 / (1 + rs))
+#
+#     rsi = rsi.where(avg_loss != 0, 100)
+#     rsi = rsi.where(avg_gain != 0, 0)
+#
+#     return rsi
+#
+#
+# def rsi_sma(series, period=RSI_PERIOD):
+#     delta = series.diff()
+#     gain = delta.clip(lower=0)
+#     loss = -delta.clip(upper=0)
+#
+#     avg_gain = gain.rolling(period).mean()
+#     avg_loss = loss.rolling(period).mean()
+#
+#     rs = avg_gain / avg_loss
+#     rsi = 100 - (100 / (1 + rs))
+#
+#     rsi = rsi.where(avg_loss != 0, 100)
+#     rsi = rsi.where(avg_gain != 0, 0)
+#
+#     return rsi
+#
+#
+# def add_indicators(df):
+#     df = df.copy()
+#
+#     df["EMA20"] = ema(df["CLOSE"], 20)
+#     df["EMA50"] = ema(df["CLOSE"], 50)
+#     df["EMA200"] = ema(df["CLOSE"], 200)
+#
+#     df["RSI_WILDER"] = rsi_wilder(df["CLOSE"], RSI_PERIOD)
+#     df["RSI_SMA"] = rsi_sma(df["CLOSE"], RSI_PERIOD)
+#
+#     df["AvgVol20"] = df["VOLUME"].rolling(20).mean()
+#
+#     return df
+#
+#
+# # =========================================================
+# # STRICTNESS / SCORING SYSTEM
+# # =========================================================
+#
+# def strictness_required_score(strictness: float) -> int:
+#     return 4 if strictness >= 0.95 else 3
+#
+#
+# def get_liberal_params(strictness: float):
+#     if strictness >= 0.95:
+#         return {
+#             "vol_multiplier": 1.5,
+#             "rsi_low": 50,
+#             "rsi_high": 75,
+#             "near_breakout_pct": 0.99,
+#         }
+#
+#     if strictness >= 0.90:
+#         return {
+#             "vol_multiplier": 1.2,
+#             "rsi_low": 48,
+#             "rsi_high": 78,
+#             "near_breakout_pct": 0.985,
+#         }
+#
+#     return {
+#         "vol_multiplier": 1.0,
+#         "rsi_low": 45,
+#         "rsi_high": 80,
+#         "near_breakout_pct": 0.98,
+#     }
+#
+#
+# # =========================================================
+# # STRATEGY LOGIC
+# # =========================================================
+#
+# def evaluate_conditions(row, prev_high, params):
+#     breakout = row["CLOSE"] > prev_high
+#     near_breakout = row["CLOSE"] > prev_high * params["near_breakout_pct"]
+#
+#     vol_ok = row["VOLUME"] > params["vol_multiplier"] * row["AvgVol20"]
+#
+#     # Swing trend logic (improved)
+#     trend_ok = (row["EMA20"] > row["EMA50"]) and (row["CLOSE"] > row["EMA50"])
+#     ema200_ok = row["CLOSE"] > row["EMA200"]
+#
+#     rsi_val = row["RSI_WILDER"]
+#     rsi_ok = params["rsi_low"] <= rsi_val <= params["rsi_high"]
+#
+#     return breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok
+#
+#
+# # =========================================================
+# # ENTRY RULES
+# # =========================================================
+#
+# def should_buy_signal(breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok, score, required):
+#
+#     # STRICT BREAKOUT = only above EMA200
+#     if breakout and ema200_ok and score >= required:
+#         return True, "STRICT_BREAKOUT_EMA200"
+#
+#     # LITE breakout = allow above EMA50 trend
+#     if breakout and trend_ok and vol_ok and rsi_ok:
+#         return True, "BREAKOUT_EMA50"
+#
+#     # Near breakout entry
+#     if near_breakout and trend_ok and (vol_ok or rsi_ok):
+#         return True, "LITE_NEAR_BREAKOUT"
+#
+#     return False, None
+#
+#
+# # =========================================================
+# # SIGNAL
+# # =========================================================
+#
+# def technical_signal(df, lookback=LOOKBACK, strictness=STRICTNESS):
+#     df = add_indicators(df)
+#     last = df.iloc[-1]
+#
+#     if pd.isna(last["RSI_WILDER"]) or pd.isna(last["EMA50"]) or pd.isna(last["AvgVol20"]):
+#         return "NO TRADE"
+#
+#     params = get_liberal_params(strictness)
+#     required = strictness_required_score(strictness)
+#
+#     prev_high = df["HIGH"].iloc[-lookback-1:-1].max()
+#
+#     breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok = evaluate_conditions(last, prev_high, params)
+#
+#     conditions = [breakout, vol_ok, trend_ok, rsi_ok]
+#     score = sum(bool(x) for x in conditions)
+#
+#     buy, _ = should_buy_signal(breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok, score, required)
+#
+#     if buy:
+#         return "BUY TRIGGER"
+#
+#     if near_breakout and trend_ok:
+#         return "PREPARE"
+#
+#     return "NO TRADE"
+#
+#
+# # =========================================================
+# # DEBUG
+# # =========================================================
+#
+# def debug_conditions(df, lookback=LOOKBACK, strictness=STRICTNESS):
+#     df = add_indicators(df)
+#     last = df.iloc[-1]
+#
+#     if pd.isna(last["RSI_WILDER"]):
+#         print("\n🔍 CONDITION CHECK (LAST CANDLE)")
+#         print("RSI not ready – insufficient data")
+#         return
+#
+#     params = get_liberal_params(strictness)
+#     required = strictness_required_score(strictness)
+#
+#     prev_high = df["HIGH"].iloc[-lookback-1:-1].max()
+#
+#     breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok = evaluate_conditions(last, prev_high, params)
+#
+#     conditions = [breakout, vol_ok, trend_ok, rsi_ok]
+#     score = sum(bool(x) for x in conditions)
+#
+#     buy, reason = should_buy_signal(breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok, score, required)
+#
+#     print("\n🔍 CONDITION CHECK (LAST CANDLE)")
+#     print("Strictness Mode:", strictness)
+#     print("Breakout:", breakout)
+#     print("Near Breakout:", near_breakout)
+#     print("Volume Spike:", vol_ok)
+#     print("Trend OK:", trend_ok)
+#     print("Above EMA200:", ema200_ok)
+#     print("RSI OK:", rsi_ok)
+#     print("BUY Logic:", buy, "| Reason:", reason)
+#
+#     print("\n📌 EXTRA INFO")
+#     print("Close:", last["CLOSE"])
+#     print("Prev 20D High:", prev_high)
+#     print("AvgVol20:", round(last["AvgVol20"], 2))
+#     print("Volume:", last["VOLUME"])
+#     print("EMA20:", round(last["EMA20"], 2))
+#     print("EMA50:", round(last["EMA50"], 2))
+#     print("EMA200:", round(last["EMA200"], 2))
+#
+#
+# # =========================================================
+# # MAIN
+# # =========================================================
+#
+# if __name__ == "__main__":
+#     csv_paths = glob.glob("csv file/*.csv")
+#
+#     for csv_path in csv_paths:
+#         print(f"\nProcessing: {csv_path}")
+#
+#         df = load_csv(csv_path)
+#
+#         debug_conditions(df)
+#         signal = technical_signal(df)
+#
+#         print("Signal:", signal)
+#         print("==================================================================")
+
+#=====================================================================================================================================================================================
+
 import pandas as pd
 import numpy as np
 import glob
@@ -649,33 +949,35 @@ def evaluate_conditions(row, prev_high, params):
 
     vol_ok = row["VOLUME"] > params["vol_multiplier"] * row["AvgVol20"]
 
-    # Swing trend logic (improved)
-    trend_ok = (row["EMA20"] > row["EMA50"]) and (row["CLOSE"] > row["EMA50"])
+    # EARLY TREND (EMA50 based)
+    early_trend_ok = (row["EMA20"] > row["EMA50"]) and (row["CLOSE"] > row["EMA50"])
+
+    # CONFIRM TREND (EMA200 based)
     ema200_ok = row["CLOSE"] > row["EMA200"]
 
     rsi_val = row["RSI_WILDER"]
     rsi_ok = params["rsi_low"] <= rsi_val <= params["rsi_high"]
 
-    return breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok
+    return breakout, near_breakout, vol_ok, early_trend_ok, ema200_ok, rsi_ok
 
 
 # =========================================================
-# ENTRY RULES
+# ENTRY RULES (2 STAGE)
 # =========================================================
 
-def should_buy_signal(breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok, score, required):
+def should_buy_signal(breakout, near_breakout, vol_ok, early_trend_ok, ema200_ok, rsi_ok, score, required):
 
-    # STRICT BREAKOUT = only above EMA200
+    # 🟩 STAGE-2 CONFIRM BUY (only above EMA200)
     if breakout and ema200_ok and score >= required:
-        return True, "STRICT_BREAKOUT_EMA200"
+        return True, "CONFIRM_BUY_EMA200"
 
-    # LITE breakout = allow above EMA50 trend
-    if breakout and trend_ok and vol_ok and rsi_ok:
-        return True, "BREAKOUT_EMA50"
+    # 🟢 STAGE-1 EARLY BUY (below EMA200 allowed)
+    if breakout and early_trend_ok and vol_ok and rsi_ok:
+        return True, "EARLY_BUY_EMA50"
 
-    # Near breakout entry
-    if near_breakout and trend_ok and (vol_ok or rsi_ok):
-        return True, "LITE_NEAR_BREAKOUT"
+    # 🟡 PREPARE (near breakout but not confirmed)
+    if near_breakout and early_trend_ok and (vol_ok or rsi_ok):
+        return True, "PREPARE"
 
     return False, None
 
@@ -689,27 +991,38 @@ def technical_signal(df, lookback=LOOKBACK, strictness=STRICTNESS):
     last = df.iloc[-1]
 
     if pd.isna(last["RSI_WILDER"]) or pd.isna(last["EMA50"]) or pd.isna(last["AvgVol20"]):
-        return "NO TRADE"
+        return "NO_TRADE"
 
     params = get_liberal_params(strictness)
     required = strictness_required_score(strictness)
 
     prev_high = df["HIGH"].iloc[-lookback-1:-1].max()
 
-    breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok = evaluate_conditions(last, prev_high, params)
+    breakout, near_breakout, vol_ok, early_trend_ok, ema200_ok, rsi_ok = evaluate_conditions(
+        last, prev_high, params
+    )
 
-    conditions = [breakout, vol_ok, trend_ok, rsi_ok]
+    conditions = [breakout, vol_ok, early_trend_ok, rsi_ok]
     score = sum(bool(x) for x in conditions)
 
-    buy, _ = should_buy_signal(breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok, score, required)
+    buy, reason = should_buy_signal(
+        breakout, near_breakout, vol_ok, early_trend_ok, ema200_ok, rsi_ok, score, required
+    )
 
-    if buy:
-        return "BUY TRIGGER"
+    if not buy:
+        return "NO_TRADE"
 
-    if near_breakout and trend_ok:
+    # Return proper stage
+    if reason == "CONFIRM_BUY_EMA200":
+        return "CONFIRM_BUY"
+
+    if reason == "EARLY_BUY_EMA50":
+        return "EARLY_BUY"
+
+    if reason == "PREPARE":
         return "PREPARE"
 
-    return "NO TRADE"
+    return "NO_TRADE"
 
 
 # =========================================================
@@ -730,19 +1043,23 @@ def debug_conditions(df, lookback=LOOKBACK, strictness=STRICTNESS):
 
     prev_high = df["HIGH"].iloc[-lookback-1:-1].max()
 
-    breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok = evaluate_conditions(last, prev_high, params)
+    breakout, near_breakout, vol_ok, early_trend_ok, ema200_ok, rsi_ok = evaluate_conditions(
+        last, prev_high, params
+    )
 
-    conditions = [breakout, vol_ok, trend_ok, rsi_ok]
+    conditions = [breakout, vol_ok, early_trend_ok, rsi_ok]
     score = sum(bool(x) for x in conditions)
 
-    buy, reason = should_buy_signal(breakout, near_breakout, vol_ok, trend_ok, ema200_ok, rsi_ok, score, required)
+    buy, reason = should_buy_signal(
+        breakout, near_breakout, vol_ok, early_trend_ok, ema200_ok, rsi_ok, score, required
+    )
 
     print("\n🔍 CONDITION CHECK (LAST CANDLE)")
     print("Strictness Mode:", strictness)
     print("Breakout:", breakout)
     print("Near Breakout:", near_breakout)
     print("Volume Spike:", vol_ok)
-    print("Trend OK:", trend_ok)
+    print("Early Trend OK (EMA50):", early_trend_ok)
     print("Above EMA200:", ema200_ok)
     print("RSI OK:", rsi_ok)
     print("BUY Logic:", buy, "| Reason:", reason)
@@ -774,4 +1091,5 @@ if __name__ == "__main__":
 
         print("Signal:", signal)
         print("==================================================================")
+
 
